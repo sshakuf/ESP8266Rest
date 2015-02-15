@@ -2,6 +2,7 @@
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
+#include "osapi.h"
 #include "user_config.h"
 
 #include "user_interface.h"
@@ -33,10 +34,9 @@ void dbgprint(const char* format, ... ) {
     va_list args;
     char buff[512];
     va_start( args, format );
-    ets_sprintf( buff, format, args );
-    va_end( args );
+    os_sprintf(buff, format, args );
     uart0_tx_buffer(buff,strlen(buff));
-
+    va_end( args );
 }
 
 
@@ -63,7 +63,7 @@ void some_timerfunc(void *arg)
 static void ICACHE_FLASH_ATTR
 loop(os_event_t *events)
 {
-    os_printf("loop\n\r");
+    //dbgprint("loop\n\r");
     os_delay_us(10000);
     system_os_post(user_procTaskPrio, 0, 0 );
 }
@@ -81,17 +81,17 @@ static void ICACHE_FLASH_ATTR networkServerFoundCb(const char *name, ip_addr_t *
   static esp_tcp tcp;
   struct espconn *conn=(struct espconn *)arg;
   if (ip==NULL) {
-    os_printf("Nslookup failed :/ Trying again...\n");
-    uart0_tx_buffer("lfai",4);
+    dbgprint("Nslookup failed :/ Trying again...\n");
+    dbgprint("lfai");
     network_init();
   }
 
-  uart0_tx_buffer("lokk",4);
+  // dbgprint("lokk");
   char page_buffer[20];
   os_sprintf(page_buffer,"DST: %d.%d.%d.%d",
   *((uint8 *)&ip->addr), *((uint8 *)&ip->addr + 1),
   *((uint8 *)&ip->addr + 2), *((uint8 *)&ip->addr + 3));
-  uart0_tx_buffer(page_buffer,strlen(page_buffer));
+  dbgprint(page_buffer);
 
   // conn->type=ESPCONN_TCP;
   // conn->state=ESPCONN_NONE;
@@ -106,7 +106,6 @@ static void ICACHE_FLASH_ATTR networkServerFoundCb(const char *name, ip_addr_t *
   // espconn_regist_sentcb(conn, networkSentCb);
   // espconn_connect(conn);
 
-  ServerInit(80);
 }
 
 static void ICACHE_FLASH_ATTR networkSentCb(void *arg) {
@@ -151,8 +150,8 @@ static void ICACHE_FLASH_ATTR networkDisconCb(void *arg) {
 void ICACHE_FLASH_ATTR network_start() {
   static struct espconn conn;
   static ip_addr_t ip;
-  os_printf("Looking up server...\n");
-    uart0_tx_buffer("look",4);
+  dbgprint("Looking up server...\n");
+    dbgprint("look");
   espconn_gethostbyname(&conn, "www.google.com", &ip, networkServerFoundCb);
 }
 
@@ -163,10 +162,13 @@ void ICACHE_FLASH_ATTR network_check_ip(void) {
   if (wifi_station_get_connect_status() == STATION_GOT_IP && ipconfig.ip.addr != 0) {
     char page_buffer[20];
     os_sprintf(page_buffer,"IP: %d.%d.%d.%d",IP2STR(&ipconfig.ip));
-    uart0_tx_buffer(page_buffer,strlen(page_buffer));
-    network_start();
+    dbgprint(page_buffer);
+
+    ServerInit(80);
+
+    //network_start();
   } else {
-    os_printf("No ip found\n\r");
+    dbgprint("No ip found\n\r");
     os_timer_setfn(&network_timer, (os_timer_func_t *)network_check_ip, NULL);
     os_timer_arm(&network_timer, 1000, 0);
   }
@@ -222,7 +224,7 @@ void ICACHE_FLASH_ATTR user_init() {
     os_memcpy(&stationConf.password, password, 64);
     wifi_station_set_config(&stationConf);
 
-    uart0_tx_buffer("init",4);
+    dbgprint("init");
 
     //Start os task
     system_os_task(loop, user_procTaskPrio,user_procTaskQueue, user_procTaskQueueLen);
