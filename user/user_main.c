@@ -14,6 +14,8 @@
 #include "common.h"
 #include "server.h"
 
+#include <stdio.h>
+#include <stdarg.h>
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -22,9 +24,19 @@ static void loop(os_event_t *events);
 
 static volatile os_timer_t some_timer;
 
-void dbgprint(char* inBuff)
+void dbgprint1(char* inBuff)
 {
     uart0_tx_buffer(inBuff,strlen(inBuff));
+}
+
+void dbgprint(const char* format, ... ) {
+    va_list args;
+    char buff[512];
+    va_start( args, format );
+    ets_sprintf( buff, format, args );
+    va_end( args );
+    uart0_tx_buffer(buff,strlen(buff));
+
 }
 
 

@@ -6,7 +6,8 @@
 #define SSID_PASSWORD "1011040311037"
 
 
-void dbgprint(char* inBuff);
+void dbgprint1(char* inBuff);
+void dbgprint(const char* format, ... );
 
 
 #endif //COMMON_H

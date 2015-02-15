@@ -9,5 +9,13 @@
 void ICACHE_FLASH_ATTR ServerInit(int port);
 
 
+typedef struct  {
+	struct espconn *conn;
+	char *url;
+	int postLen;
+	char *postBuff;
+} ServerConnData;
+
+
 
 #endif //SERVER_H
