@@ -40,22 +40,19 @@ void dbgprint(const char* format, ... ) {
 }
 
 
+
+
 void some_timerfunc(void *arg)
 {
-    //os_printf("Hello\n\r");
-    //dbgprint("\r\nready\r\n");
-    //Do blinky stuff
     if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & BIT2)
     {
         //Set GPIO2 to LOW
         gpio_output_set(0, BIT2, BIT2, 0);
-        // dbgprint("\r\nGPIO2 to LOW\r\n");
     }
     else
     {
         //Set GPIO2 to HIGH
         gpio_output_set(BIT2, 0, BIT2, 0);
-        // dbgprint("\r\nGPIO2 to HIGH\r\n");
     }
 }
 
@@ -203,7 +200,7 @@ user_init_gpio()
     //&some_timer is the pointer
     //1000 is the fire time in ms
     //0 for once and 1 for repeating
-    os_timer_arm(&some_timer, 1000, 1);
+    //os_timer_arm(&some_timer, 1000, 1);
     
 }
 

@@ -46,12 +46,25 @@ typedef struct
 
 static void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
 {
+	dbgprint("doFlipinput");
+    if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & BIT2)
+    {
+        //Set GPIO2 to LOW
+        gpio_output_set(0, BIT2, BIT2, 0);
+    }
+    else
+    {
+        //Set GPIO2 to HIGH
+        gpio_output_set(BIT2, 0, BIT2, 0);
+    }
 }
 static void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn)
 {
+	dbgprint("doOpen");
 }
 static void ICACHE_FLASH_ATTR doStatus(ServerConnData* conn)
 {
+	dbgprint("doStatus");
 }
 
 RestPtrs RestPtrsTable[] = { 
@@ -61,50 +74,51 @@ RestPtrs RestPtrsTable[] = {
 };
 #define NUMOFCOMMANDS 3
 
-// String getValue(String data, char separator, int index)
-// {
-//  int found = 0;
-//   int strIndex[] = {0, -1  };
-//   int maxIndex = data.length()-1;
-//   for(int i=0; i<=maxIndex && found<=index; i++){
-//   if(data.charAt(i)==separator || i==maxIndex){
-//   found++;
-//   strIndex[0] = strIndex[1]+1;
-//   strIndex[1] = (i == maxIndex) ? i+1 : i;
-//   }
-//  }
-//   return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
-// }
+static void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator, int index)
+{
+  int found = 0;
+  int i=0;
+  int strIndex[] = {0, -1  };
+  int maxIndex = strlen(data)-1;
+  for(i=0; i<=maxIndex && found<=index; i++){
+	  if(data[i]==separator || i==maxIndex){
+	  found++;
+	  strIndex[0] = strIndex[1]+1;
+	  strIndex[1] = (i == maxIndex) ? i+1 : i;
+	  }
+  }
+  int size = strIndex[1]-strIndex[0];
+  dbgprintf("\nget param 0=%d,1=%d\n", strIndex[0], strIndex[1])
+  strncpy(retParam, &data[strIndex[0]],(size_t)size );
+  retParam[strIndex[1]-1] = '\0';
+}
 
 
 static void ICACHE_FLASH_ATTR ParseURLCommand(char *h, ServerConnData* conn) {
-	// char* pb = conn->url;
+	char* pb = conn->url;
+	int idx;
+	char param[20];
 	// if (strncmp(pb, "GET /", 5) == 0) {
- //        // dbgTerminalprintln("GET /");
  //        pb +=5;
         
- //        String URL = String(pb);
- //        String command = getValue(String(URL),'/',0);
- //        // dbgTerminalprintln("URL - " + URL);
-
-
- //        bool handeled = false;
- //        for (int idx = 0; idx < NUMOFCOMMANDS; idx++)
- //        {
- //          // dbgTerminalprintln(command + " " + RestPtrsTable[idx].command);
- //          if (command == RestPtrsTable[idx].command)
- //          {
- //            RestPtrsTable[idx].f(ch_id, URL);
- //            handeled = true;
- //            clearSerialBuffer(true);
- //            break;
- //          }
- //        }
- //        if (!handeled)
- //        {
- //          // dbgTerminalprintln("NO REST REPLAY");
- //        }
- //      }
+        getValue(param, pb,'/',1);
+        dbgprint("param - ");
+        dbgprint(param);
+        bool handeled = false;
+        for (idx = 0; idx < NUMOFCOMMANDS; idx++)
+        {
+          if (strcmp(param,RestPtrsTable[idx].command) == 0)
+          {
+            RestPtrsTable[idx].f(conn);
+            handeled = true;
+            break;
+          }
+        }
+        if (!handeled)
+        {
+          // dbgTerminalprintln("NO REST REPLAY");
+        }
+      // }
 }
 
 
@@ -114,7 +128,7 @@ static ServerConnData ICACHE_FLASH_ATTR *httpdFindConnData(void *arg) {
 	for (i=0; i<MAX_CONN; i++) {
 		if (gServerConnData[i].conn==(struct espconn *)arg) return &gServerConnData[i];
 	}
-	dbgprint("FindConnData: Huh? Couldn't find connection for %p\n", arg);
+	dbgprintf("FindConnData: Huh? Couldn't find connection for %p\n", arg);
 	return NULL; //WtF?
 }
 
