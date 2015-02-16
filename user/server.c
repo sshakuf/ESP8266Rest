@@ -42,26 +42,65 @@ typedef struct
   void(*f)(ServerConnData* conn);
 } RestPtrs;
 
+#define NUM_OF_OUTPUT_PORTS 2
+bool portsVal[NUM_OF_OUTPUT_PORTS];
+uint32 portsBits[NUM_OF_OUTPUT_PORTS] = {BIT2,BIT0};
 
+static void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
+{
+
+	char buff[50];
+	char *p;
+	int i=0;
+
+	StartResponse(conn, 200);
+	AddHeader(conn, "Content-Type", "application/json");
+	AddHeader(conn, "Access-Control-Allow-Origin", "*");
+	AddHeader(conn, "Access-Control-Allow-Methods", "GET, POST, PUT");
+	AddHeader(conn, "Connection", "close");
+	EndHeaders(conn);
+
+	httpdSend(conn,"{\"ports\":{", -1);
+
+	for (i=0; i<NUM_OF_OUTPUT_PORTS; i++)
+	{
+		os_sprintf(buff,"\"RL%d\":\"%d\"", i, portsVal[i], -1);
+		httpdSend(conn,buff, -1);
+		if (i < NUM_OF_OUTPUT_PORTS-1)
+	   	{
+			httpdSend(conn,",", -1);
+	   	}
+	}
+	httpdSend(conn,"}}", -1);
+
+	xmitSendBuff(conn);
+
+}
 
 static void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
 {
-	dbgprint("doFlipinput");
-    if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & BIT2)
+	dbgprint("doFlipinput\r\n");
+
+	char param[20];
+    getValue(param, conn->url,'/',2);
+	int inputNum = atoi(param);
+
+	dbgprintf("param 2= %d\r\n", inputNum);
+
+
+    if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & portsBits[inputNum])
     {
         //Set GPIO2 to LOW
-        gpio_output_set(0, BIT2, BIT2, 0);
+        gpio_output_set(0, portsBits[inputNum], portsBits[inputNum], 0);
+        portsVal[inputNum] = 0;
     }
     else
     {
         //Set GPIO2 to HIGH
-        gpio_output_set(BIT2, 0, BIT2, 0);
+        gpio_output_set(portsBits[inputNum], 0, portsBits[inputNum], 0);
+        portsVal[inputNum] = 1;
     }
-
-    StartResponse(conn, 200);
-    EndHeaders(conn);
-    httpdSend(conn, "{\"ports\":{\"RL0\":\"0\",\"RL1\":\"0\"}}", -1);
-    xmitSendBuff(conn);
+    SendPortStatus(conn);
 }
 static void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn)
 {
@@ -70,6 +109,7 @@ static void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn)
 static void ICACHE_FLASH_ATTR doStatus(ServerConnData* conn)
 {
 	dbgprint("doStatus");
+    SendPortStatus(conn);
 }
 
 RestPtrs RestPtrsTable[] = { 
@@ -89,7 +129,7 @@ static void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char se
 	  if(data[i]==separator || i==maxIndex){
 	  found++;
 	  strIndex[0] = strIndex[1]+1;
-	  strIndex[1] = (i == maxIndex) ? i+1 : i;
+	  strIndex[1] = (i == maxIndex) ? i : i;
 	  }
   }
   int size = strIndex[1]-strIndex[0];
@@ -106,7 +146,7 @@ static void ICACHE_FLASH_ATTR ParseURLCommand(char *h, ServerConnData* conn) {
 	// if (strncmp(pb, "GET /", 5) == 0) {
  //        pb +=5;
         
-        getValue(param, pb,'/',1);
+        getValue(param, conn->url,'/',1);
         dbgprint("param - ");
         dbgprint(param);
         bool handeled = false;
@@ -189,19 +229,19 @@ static void ICACHE_FLASH_ATTR xmitSendBuff(ServerConnData *conn) {
 //sent.
 static void ICACHE_FLASH_ATTR httpdSentCb(void *arg) {
 	int r;
-	// HttpdConnData *conn=httpdFindConnData(arg);
-	// char sendBuff[MAX_SENDBUFF_LEN];
+	ServerConnData *conn=httpdFindConnData(arg);
+	char sendBuff[MAX_SENDBUFF_LEN];
 
 	dbgprint("Sent callback on conn \n");
-	// if (conn==NULL) return;
-	// conn->priv->sendBuff=sendBuff;
-	// conn->priv->sendBuffLen=0;
+	if (conn==NULL) return;
+	conn->priv->sendBuff=sendBuff;
+	conn->priv->sendBuffLen=0;
 
 	// if (conn->cgi==NULL) { //Marked for destruction?
-	// 	dbgprint("Conn %p is done. Closing.\n", conn->conn);
-	// 	espconn_disconnect(conn->conn);
-	// 	ServerRetireConn(conn);
-	// 	return; //No need to call xmitSendBuff.
+		dbgprint("Conn %p is done. Closing.\n", conn->conn);
+		espconn_disconnect(conn->conn);
+		ServerRetireConn(conn);
+		return; //No need to call xmitSendBuff.
 	// }
 
 	// r=conn->cgi(conn); //Execute cgi fn.
