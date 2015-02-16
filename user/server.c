@@ -57,6 +57,11 @@ static void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
         //Set GPIO2 to HIGH
         gpio_output_set(BIT2, 0, BIT2, 0);
     }
+
+    StartResponse(conn, 200);
+    EndHeaders(conn);
+    httpdSend(conn, "{\"ports\":{\"RL0\":\"0\",\"RL1\":\"0\"}}", -1);
+    xmitSendBuff(conn);
 }
 static void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn)
 {
@@ -133,12 +138,52 @@ static ServerConnData ICACHE_FLASH_ATTR *httpdFindConnData(void *arg) {
 }
 
 //Retires a connection for re-use
-static void ICACHE_FLASH_ATTR httpdRetireConn(ServerConnData *conn) {
+static void ICACHE_FLASH_ATTR ServerRetireConn(ServerConnData *conn) {
 	if (conn->postBuff!=NULL) os_free(conn->postBuff);
 	conn->postBuff=NULL;
 	conn->conn=NULL;
 }
 
+//Start the response headers.
+void ICACHE_FLASH_ATTR StartResponse(ServerConnData *conn, int code) {
+	char buff[128];
+	int l;
+	l=os_sprintf(buff, "HTTP/1.0 %d OK\r\nServer: esp8266-httpd\"HTTPDVER\"\r\n", code);
+	httpdSend(conn, buff, l);
+}
+
+//Send a http header.
+void ICACHE_FLASH_ATTR AddHeader(ServerConnData *conn, const char *field, const char *val) {
+	char buff[256];
+	int l;
+
+	l=os_sprintf(buff, "%s: %s\r\n", field, val);
+	httpdSend(conn, buff, l);
+}
+
+//Finish the headers.
+void ICACHE_FLASH_ATTR EndHeaders(ServerConnData *conn) {
+	httpdSend(conn, "\r\n", -1);
+}
+
+//Add data to the send buffer. len is the length of the data. If len is -1
+//the data is seen as a C-string.
+//Returns 1 for success, 0 for out-of-memory.
+int ICACHE_FLASH_ATTR httpdSend(ServerConnData *conn, const char *data, int len) {
+	if (len<0) len=strlen(data);
+	if (conn->priv->sendBuffLen+len>MAX_SENDBUFF_LEN) return 0;
+	os_memcpy(conn->priv->sendBuff+conn->priv->sendBuffLen, data, len);
+	conn->priv->sendBuffLen+=len;
+	return 1;
+}
+
+//Helper function to send any data in conn->priv->sendBuff
+static void ICACHE_FLASH_ATTR xmitSendBuff(ServerConnData *conn) {
+	if (conn->priv->sendBuffLen!=0) {
+		espconn_sent(conn->conn, (uint8_t*)conn->priv->sendBuff, conn->priv->sendBuffLen);
+		conn->priv->sendBuffLen=0;
+	}
+}
 
 //Callback called when the data on a socket has been successfully
 //sent.
@@ -155,7 +200,7 @@ static void ICACHE_FLASH_ATTR httpdSentCb(void *arg) {
 	// if (conn->cgi==NULL) { //Marked for destruction?
 	// 	dbgprint("Conn %p is done. Closing.\n", conn->conn);
 	// 	espconn_disconnect(conn->conn);
-	// 	httpdRetireConn(conn);
+	// 	ServerRetireConn(conn);
 	// 	return; //No need to call xmitSendBuff.
 	// }
 
