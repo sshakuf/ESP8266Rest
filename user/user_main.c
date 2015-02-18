@@ -152,6 +152,20 @@ void ICACHE_FLASH_ATTR network_start() {
   espconn_gethostbyname(&conn, "www.google.com", &ip, networkServerFoundCb);
 }
 
+void ICACHE_FLASH_ATTR SetSetverMode()
+{
+    struct softap_config apConfig;
+
+    os_memcpy(&apConfig.ssid, AP_SSID,32);
+    os_memcpy(&apConfig.password, AP_PASSWORD,32);
+    apConfig.ssid_len = strlen(AP_SSID);
+    apConfig.channel = 6;
+    apConfig.authmode = AUTH_WPA_PSK;   
+    wifi_softap_set_config(&apConfig);
+    wifi_softap_dhcps_start();
+
+}
+
 void ICACHE_FLASH_ATTR network_check_ip(void) {
   struct ip_info ipconfig;
   os_timer_disarm(&network_timer);
@@ -212,21 +226,28 @@ void ICACHE_FLASH_ATTR user_init() {
     char password[64] = SSID_PASSWORD;
     struct station_config stationConf;
 
+    dbgprint("\ninit\n");
+
     user_init_gpio();
-    //Set station mode
-    wifi_set_opmode( 0x1 );
+    //Set station mode & AP mode
+    // wifi_set_opmode(STATION_MODE);
+    wifi_set_opmode(STATIONAP_MODE);
 
     //Set ap settings
     os_memcpy(&stationConf.ssid, ssid, 32);
     os_memcpy(&stationConf.password, password, 64);
     wifi_station_set_config(&stationConf);
 
-    dbgprint("init");
+    SetSetverMode();
+    
+
 
     //Start os task
     system_os_task(loop, user_procTaskPrio,user_procTaskQueue, user_procTaskQueueLen);
 
     system_os_post(user_procTaskPrio, 0, 0 );
+
+    dbgprint("\ninitialize Network\n");
 
     network_init();
 }
