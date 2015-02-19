@@ -79,13 +79,13 @@ static void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 
 static void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
 {
-	dbgprint("doFlipinput\r\n");
+	os_printf("doFlipinput\r\n");
 
 	char param[20];
     getValue(param, conn->url,'/',2);
 	int inputNum = atoi(param);
 
-	dbgprintf("param 2= %d\r\n", inputNum);
+	os_printf("param 2= %d\r\n", inputNum);
 
 
     if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & portsBits[inputNum])
@@ -104,11 +104,11 @@ static void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
 }
 static void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn)
 {
-	dbgprint("doOpen");
+	os_printf("doOpen");
 }
 static void ICACHE_FLASH_ATTR doStatus(ServerConnData* conn)
 {
-	dbgprint("doStatus");
+	os_printf("doStatus");
     SendPortStatus(conn);
 }
 
@@ -133,7 +133,7 @@ static void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char se
 	  }
   }
   int size = strIndex[1]-strIndex[0];
-  dbgprintf("\nget param 0=%d,1=%d\n", strIndex[0], strIndex[1])
+  os_printf("\nget param 0=%d,1=%d\n", strIndex[0], strIndex[1]);
   strncpy(retParam, &data[strIndex[0]],(size_t)size );
   retParam[strIndex[1]-1] = '\0';
 }
@@ -147,8 +147,8 @@ static void ICACHE_FLASH_ATTR ParseURLCommand(char *h, ServerConnData* conn) {
  //        pb +=5;
         
         getValue(param, conn->url,'/',1);
-        dbgprint("param - ");
-        dbgprint(param);
+        os_printf("param - ");
+        os_printf(param);
         bool handeled = false;
         for (idx = 0; idx < NUMOFCOMMANDS; idx++)
         {
@@ -173,7 +173,7 @@ static ServerConnData ICACHE_FLASH_ATTR *httpdFindConnData(void *arg) {
 	for (i=0; i<MAX_CONN; i++) {
 		if (gServerConnData[i].conn==(struct espconn *)arg) return &gServerConnData[i];
 	}
-	dbgprintf("FindConnData: Huh? Couldn't find connection for %p\n", arg);
+	os_printf("FindConnData: Huh? Couldn't find connection for %p\n", arg);
 	return NULL; //WtF?
 }
 
@@ -232,13 +232,13 @@ static void ICACHE_FLASH_ATTR httpdSentCb(void *arg) {
 	ServerConnData *conn=httpdFindConnData(arg);
 	char sendBuff[MAX_SENDBUFF_LEN];
 
-	dbgprint("Sent callback on conn \n");
+	os_printf("Sent callback on conn \n");
 	if (conn==NULL) return;
 	conn->priv->sendBuff=sendBuff;
 	conn->priv->sendBuffLen=0;
 
 	// if (conn->cgi==NULL) { //Marked for destruction?
-		dbgprint("Conn %p is done. Closing.\n", conn->conn);
+		os_printf("Conn %p is done. Closing.\n", conn->conn);
 		espconn_disconnect(conn->conn);
 		ServerRetireConn(conn);
 		return; //No need to call xmitSendBuff.
@@ -302,13 +302,13 @@ static void ICACHE_FLASH_ATTR ServerParseHeaderURL(char *h, ServerConnData* conn
 		if (e==NULL) return; //wtf?
 		*e=0; //terminate url part
 
-		dbgprintf("URL = %s\n", conn->url);
+		os_printf("URL = %s\n", conn->url);
 		//Parse out the URL part before the GET parameters.
 		conn->getArgs=(char*)os_strstr(conn->url, "?");
 		if (conn->getArgs!=0) {
 			*conn->getArgs=0;
 			conn->getArgs++;
-			dbgprintf("GET args = %s\n", conn->getArgs); 
+			os_printf("GET args = %s\n", conn->getArgs); 
 
 		} else {
 			conn->getArgs=NULL;
@@ -323,14 +323,14 @@ static void ICACHE_FLASH_ATTR ServerParseHeaderURL(char *h, ServerConnData* conn
 		int postLen=atoi(h+i+1);
 		//Clamp if too big. Hmm, maybe we should error out instead?
 		if (postLen>MAX_POST)
-			dbgprint("Mallocced buffer for xxx bytes of post data.\n");
+			os_printf("Mallocced buffer for xxx bytes of post data.\n");
 	}
 }
 
 
 static void ICACHE_FLASH_ATTR httpdRecvCb(void *arg, char *data, unsigned short len) {
-	dbgprint("httpdRecvCb\r\n");
-	//dbgprint(data);
+	os_printf("httpdRecvCb\r\n");
+	//os_printf(data);
 	//ServerConnData conn;
 
 	int x;
@@ -386,7 +386,7 @@ static void ICACHE_FLASH_ATTR httpdRecvCb(void *arg, char *data, unsigned short 
 
 static void ICACHE_FLASH_ATTR httpdReconCb(void *arg, sint8 err) {
 	// HttpdConnData *conn=httpdFindConnData(arg);
-	dbgprint("ReconCb\n");
+	os_printf("ReconCb\n");
 	// if (conn==NULL) return;
 	//Yeah... No idea what to do here. ToDo: figure something out.
 }
@@ -421,15 +421,15 @@ static void ICACHE_FLASH_ATTR httpdConnectCb(void *arg) {
 	struct espconn *conn=arg;
 	int i;
 
-     dbgprint("\r\nconnection httpd\r\n");
+     os_printf("\r\nconnection httpd\r\n");
 
-	dbgprintf("Con req, conn=%p, pool slot %d\n", conn, i);
+	os_printf("Con req, conn=%p, pool slot %d\n", conn, i);
 	
 	//Find empty conndata in pool
 	for (i=0; i<MAX_CONN; i++) if (gServerConnData[i].conn==NULL) break;
-	dbgprintf("Con req, conn=%p, pool slot %d\n", conn, i);
+	os_printf("Con req, conn=%p, pool slot %d\n", conn, i);
 	if (i==MAX_CONN) {
-		dbgprint("Aiee, conn pool overflow!\n");
+		os_printf("Aiee, conn pool overflow!\n");
 		espconn_disconnect(conn);
 		return;
 	}
@@ -457,10 +457,10 @@ void ICACHE_FLASH_ATTR ServerInit(int port) {
 	httpdTcp.local_port=port;
 	gEspConn.proto.tcp=&httpdTcp;
 
-	dbgprintf("\nServer initiated, conn=%p\n", &gEspConn);
+	os_printf("\nServer initiated, conn=%p\n", &gEspConn);
 	espconn_regist_connectcb(&gEspConn, httpdConnectCb);
 	espconn_accept(&gEspConn);
-	dbgprintf("listening on port=%d\n", port);
+	os_printf("listening on port=%d\n", port);
 }
 
 
