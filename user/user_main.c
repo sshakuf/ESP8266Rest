@@ -167,6 +167,9 @@ void ICACHE_FLASH_ATTR SetSetverMode()
 
 }
 
+int counter = 0;
+char ipstation[20];
+
 void ICACHE_FLASH_ATTR network_check_ip(void) {
   struct ip_info ipconfig;
   os_timer_disarm(&network_timer);
@@ -174,15 +177,29 @@ void ICACHE_FLASH_ATTR network_check_ip(void) {
   if (wifi_station_get_connect_status() == STATION_GOT_IP && ipconfig.ip.addr != 0) {
     char page_buffer[20];
     os_sprintf(page_buffer,"IP: %d.%d.%d.%d",IP2STR(&ipconfig.ip));
+    os_sprintf(ipstation, "%d.%d.%d.%d",IP2STR(&ipconfig.ip));
     os_printf(page_buffer);
 
     ServerInit(80);
 
     //network_start();
   } else {
+    counter++;
     os_printf("No ip found\n\r");
-    os_timer_setfn(&network_timer, (os_timer_func_t *)network_check_ip, NULL);
-    os_timer_arm(&network_timer, 1000, 0);
+    if (counter < 12)
+    {
+        os_timer_setfn(&network_timer, (os_timer_func_t *)network_check_ip, NULL);
+        os_printf("try %d\n", counter);
+        os_timer_arm(&network_timer, 1000, 0);
+    }
+    else
+    {
+        os_printf("could not connect to server\n", counter);
+        wifi_station_disconnect();
+        ServerInit(80);
+
+        counter = 0;
+    }
   }
 }
 
@@ -219,14 +236,43 @@ user_init_gpio()
     
 }
 
+
+FlashData _flashData;
+
+void ICACHE_FLASH_ATTR flash_write() {
+   
+    ETS_UART_INTR_DISABLE();
+
+    spi_flash_erase_sector(PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE);
+    spi_flash_write(0x3c000, (uint32 *)flashData, sizeof(FlashData));
+
+    ETS_UART_INTR_ENABLE();
+
+  // spi_flash_read(0x3C000, (uint32 *) settings, 1024);
+ 
+  // spi_flash_erase_sector(0x3C);
+  // spi_flash_write(0x3C000,(uint32 *)settings,1024);
+ 
+}
+ 
+void ICACHE_FLASH_ATTR flash_read() {
+    ETS_UART_INTR_DISABLE();
+    spi_flash_read((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
+                (uint32 *)flashData, sizeof(FlashData));
+    ETS_UART_INTR_ENABLE();
+}
 //Init function 
 void ICACHE_FLASH_ATTR user_init() {
 
     //uart_init(BIT_RATE_115200,BIT_RATE_115200);
+    flashData =&_flashData;
+    IPStation = ipstation;
+
     stdoutInit();
     char ssid[32] = SSID;
     char password[64] = SSID_PASSWORD;
     struct station_config stationConf;
+
 
     os_printf("\ninit\n");
 
@@ -235,13 +281,24 @@ void ICACHE_FLASH_ATTR user_init() {
     // wifi_set_opmode(STATION_MODE);
     wifi_set_opmode(STATIONAP_MODE);
 
+    flash_read();
+
+    if (flashData->magic != MAGIC_NUM)
+    {
     //Set ap settings
-    os_memcpy(&stationConf.ssid, ssid, 32);
-    os_memcpy(&stationConf.password, password, 64);
+        os_memcpy(&stationConf.ssid, ssid, 32);
+        os_memcpy(&stationConf.password, password, 64);
+    }
+    else
+    {
+        os_memcpy(&stationConf.ssid, flashData->ssid, 32);
+        os_memcpy(&stationConf.password, flashData->password, 64);
+
+    }
     wifi_station_set_config(&stationConf);
+    os_printf("\nConnecting to %s\n", stationConf.ssid);
 
     SetSetverMode();
-    
 
 
     //Start os task
@@ -249,9 +306,10 @@ void ICACHE_FLASH_ATTR user_init() {
 
     system_os_post(user_procTaskPrio, 0, 0 );
 
-    os_printf("\ninitialize Network\n");
+    os_printf("\nInitializing Network\n");
+    network_init(); 
 
-    network_init();
+
 }
 
 

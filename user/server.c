@@ -44,7 +44,23 @@ typedef struct
 
 #define NUM_OF_OUTPUT_PORTS 2
 bool portsVal[NUM_OF_OUTPUT_PORTS];
-uint32 portsBits[NUM_OF_OUTPUT_PORTS] = {BIT2,BIT0};
+uint32 portsBits[NUM_OF_OUTPUT_PORTS] = {BIT5,BIT0};
+
+static void ICACHE_FLASH_ATTR SendHTTPResponse(ServerConnData* conn, char* msg)
+{
+
+	StartResponse(conn, 200);
+	AddHeader(conn, "Content-Type", "application/json");
+	AddHeader(conn, "Access-Control-Allow-Origin", "*");
+	AddHeader(conn, "Access-Control-Allow-Methods", "GET, POST, PUT");
+	AddHeader(conn, "Connection", "close");
+	EndHeaders(conn);
+
+	httpdSend(conn,msg, -1);
+
+	xmitSendBuff(conn);
+
+}
 
 static void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 {
@@ -77,6 +93,42 @@ static void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 
 }
 
+static void ICACHE_FLASH_ATTR doSetWifi(ServerConnData* conn)
+{
+	char buff[256];
+	os_printf("doSetWifi\r\n");
+	char paramSSID[120];
+	char paramPASS[120];
+    getValue(paramSSID, conn->url,'/',2);
+    getValue(paramPASS, conn->url,'/',3);
+
+	os_printf("paramSSID 2= %s\r\n", paramSSID);
+	os_printf("paramPASS 2= %s\r\n", paramPASS);
+
+    os_memcpy(flashData->ssid, paramSSID, 32);
+    os_memcpy(flashData->password, paramPASS, 64);
+	os_sprintf(buff,"{'ssid':'%s', 'pass':'%s'}", flashData->ssid, flashData->password);
+
+	flashData->magic = MAGIC_NUM;
+    
+	flash_write();
+    SendHTTPResponse(conn, buff);
+
+
+}
+static void ICACHE_FLASH_ATTR doGetWifi(ServerConnData* conn)
+{
+	char buff[256];
+	os_printf("doGetWifi\r\n");
+
+	flash_read();
+	os_printf("SSID 2= %s\r\n", flashData->ssid);
+	//os_printf("PASS 2= %s\r\n", flashData->password);
+
+	os_sprintf(buff,"{'ssid':'%s', 'pass':'xxxx', 'IP':'%s'}", flashData->ssid, IPStation);
+    SendHTTPResponse(conn, buff);
+
+}
 static void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
 {
 	os_printf("doFlipinput\r\n");
@@ -116,8 +168,10 @@ RestPtrs RestPtrsTable[] = {
   {"flipinput",&doFlipinput},
   {"open", &doOpen},
   {"status", &doStatus},
+  {"setwifi", &doSetWifi},
+  {"getwifi", &doGetWifi}
 };
-#define NUMOFCOMMANDS 3
+#define NUMOFCOMMANDS 5
 
 static void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator, int index)
 {
@@ -135,7 +189,7 @@ static void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char se
   int size = strIndex[1]-strIndex[0];
   os_printf("\nget param 0=%d,1=%d\n", strIndex[0], strIndex[1]);
   strncpy(retParam, &data[strIndex[0]],(size_t)size );
-  retParam[strIndex[1]-1] = '\0';
+  retParam[size] = '\0';
 }
 
 

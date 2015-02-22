@@ -15,4 +15,21 @@
 // #define dbgprintf(f_, ...) os_sprintf(dbgbuff, (f_), __VA_ARGS__);\
 //     			dbgprint(dbgbuff);
 
+typedef union _DWORD_PART_ {
+    char settings[128];
+
+    struct {
+        int magic;
+        char ssid[32];
+        char password[64];
+    } ;
+} FlashData;
+
+#define MAGIC_NUM 7059
+#define PRIV_PARAM_START_SEC 0x3c
+#define PRIV_PARAM_SAVE     0
+
+FlashData* flashData;
+char* IPStation;
+
 #endif //COMMON_H
