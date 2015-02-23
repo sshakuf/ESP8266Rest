@@ -84,12 +84,12 @@ static void ICACHE_FLASH_ATTR networkServerFoundCb(const char *name, ip_addr_t *
     network_init();
   }
 
-  // os_printf("lokk");
+  // os_printf("lokk"); 
   char page_buffer[20];
   os_sprintf(page_buffer,"DST: %d.%d.%d.%d",
   *((uint8 *)&ip->addr), *((uint8 *)&ip->addr + 1),
   *((uint8 *)&ip->addr + 2), *((uint8 *)&ip->addr + 3));
-  os_printf(page_buffer);
+  os_printf(page_buffer);  
 
   // conn->type=ESPCONN_TCP;
   // conn->state=ESPCONN_NONE;
@@ -234,7 +234,7 @@ user_init_gpio()
     //0 for once and 1 for repeating
     //os_timer_arm(&some_timer, 1000, 1);
     
-}
+} 
 
 
 FlashData _flashData;

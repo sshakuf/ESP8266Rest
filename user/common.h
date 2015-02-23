@@ -15,6 +15,7 @@
 // #define dbgprintf(f_, ...) os_sprintf(dbgbuff, (f_), __VA_ARGS__);\
 //     			dbgprint(dbgbuff);
 
+//__declspec(align(4))  // needs to align ? 
 typedef union _DWORD_PART_ {
     char settings[128];
 
