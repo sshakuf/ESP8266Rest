@@ -61,7 +61,7 @@ void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator
   int found = 0;
   int i=0;
   int strIndex[] = {0, -1  };
-  int maxIndex = strlen(data)-1;
+  int maxIndex = strlen(data);
   for(i=0; i<=maxIndex && found<=index; i++){
 	  if(data[i]==separator || i==maxIndex){
 	  found++;
@@ -70,9 +70,9 @@ void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator
 	  }
   }
   int size = strIndex[1]-strIndex[0];
-  os_printf("\nget param 0=%d,1=%d\n", strIndex[0], strIndex[1]);
   strncpy(retParam, &data[strIndex[0]],(size_t)size );
   retParam[size] = '\0';
+  os_printf("\nget %d param (0=%d,1=%d): [%s]\n", index, strIndex[0], strIndex[1], retParam);
 }
 
 
@@ -84,17 +84,24 @@ void ICACHE_FLASH_ATTR ParseURLCommand(char *h, ServerConnData* conn) {
  //        pb +=5;
         
         getValue(param, conn->url,'/',1);
-        os_printf("param - ");
-        os_printf(param);
+        os_printf("Rest Command recived- %s\n", param);
+
         bool handeled = false;
-        for (idx = 0; idx < NUMOFCOMMANDS; idx++)
+        idx = 0;
+        while  (idx < 15) // just in case no more then 15 commands
         {
+        	//os_printf("verifyCommand %s\n", RestPtrsTable[idx].command);
           if (strcmp(param,RestPtrsTable[idx].command) == 0)
           {
             RestPtrsTable[idx].f(conn);
             handeled = true;
             break;
           }
+          else if (strcmp("END",RestPtrsTable[idx].command) == 0)
+          {
+        	  break;
+          }
+          idx++;
         }
         if (!handeled)
         {
@@ -141,6 +148,15 @@ void ICACHE_FLASH_ATTR AddHeader(ServerConnData *conn, const char *field, const 
 //Finish the headers.
 void ICACHE_FLASH_ATTR EndHeaders(ServerConnData *conn) {
 	httpdSend(conn, "\r\n", -1);
+}
+
+void ICACHE_FLASH_ATTR StartResponseJson(ServerConnData *conn) {
+	StartResponse(conn, 200);
+	AddHeader(conn, "Content-Type", "application/json");
+	AddHeader(conn, "Access-Control-Allow-Origin", "*");
+	AddHeader(conn, "Access-Control-Allow-Methods", "GET, POST, PUT");
+	AddHeader(conn, "Connection", "close");
+	EndHeaders(conn);
 }
 
 //Add data to the send buffer. len is the length of the data. If len is -1
@@ -217,7 +233,7 @@ static void ICACHE_FLASH_ATTR httpdSendResp(ServerConnData *conn) {
 // 		i++;
 // 	}
 // 	//Can't find :/
-	os_printf("%s not found. 404!\n", conn->url);
+	//os_printf("%s not found. 404!\n", conn->url);
 	// httpdSend(conn, httpNotFoundHeader, -1);
 	// conn->cgi=NULL; //mark for destruction
 }

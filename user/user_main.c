@@ -240,7 +240,7 @@ user_init_gpio()
 FlashData _flashData;
 
 void ICACHE_FLASH_ATTR flash_write() {
-   
+    os_printf("flashWrite() size-%d\n", sizeof(FlashData));
     ETS_UART_INTR_DISABLE();
 
     spi_flash_erase_sector(PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE);
@@ -256,6 +256,8 @@ void ICACHE_FLASH_ATTR flash_write() {
 }
  
 void ICACHE_FLASH_ATTR flash_read() {
+    os_printf("flashRead() size-%d\n", sizeof(FlashData));
+
     ETS_UART_INTR_DISABLE();
     spi_flash_read((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
                 (uint32 *)flashData, sizeof(FlashData));
@@ -283,20 +285,20 @@ void ICACHE_FLASH_ATTR user_init() {
 
     flash_read();
 
-    if (flashData->magic != MAGIC_NUM)
+    //if (flashData->magic != MAGIC_NUM)
     {
     //Set ap settings
         os_memcpy(&stationConf.ssid, ssid, 32);
         os_memcpy(&stationConf.password, password, 64);
     }
-    else
-    {
-        os_memcpy(&stationConf.ssid, flashData->ssid, 32);
-        os_memcpy(&stationConf.password, flashData->password, 64);
-
-    }
+//    else
+//    {
+//        os_memcpy(&stationConf.ssid, flashData->ssid, 32);
+//        os_memcpy(&stationConf.password, flashData->password, 64);
+//
+//    }
     wifi_station_set_config(&stationConf);
-    os_printf("\nConnecting to %s\n", stationConf.ssid);
+    os_printf("\nConnecting to %s, %s\n", stationConf.ssid, stationConf.password);
 
     SetSetverMode();
 

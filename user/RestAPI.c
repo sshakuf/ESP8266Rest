@@ -12,17 +12,29 @@
 
 #include <string.h>
 
+
+//PowerEvent _PowerEvents[MAX_POWER_EVENTS];
+PowerEvent* PowerEvents;
+
 RestPtrs _RestPtrsTable[] = { 
   {"flipinput",&doFlipinput},
   {"open", &doOpen},
   {"status", &doStatus},
   {"setwifi", &doSetWifi},
-  {"getwifi", &doGetWifi}
+  {"getwifi", &doGetWifi},
+  {"events", &doGetEvents},
+  {"event", &doSetEvent},
+
+  {"END", &doStatus} // end of commands
+
 };
 
 void ICACHE_FLASH_ATTR InitializeRest()
 {
 	RestPtrsTable = _RestPtrsTable;
+	PowerEvents =  flashData->_PowerEvents;
+
+	// todo: loadevents from EEPROM
 }
 
 uint32 portsBits[NUM_OF_OUTPUT_PORTS] = {BIT5,BIT0};
@@ -34,12 +46,7 @@ void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 	char *p;
 	int i=0;
 
-	StartResponse(conn, 200);
-	AddHeader(conn, "Content-Type", "application/json");
-	AddHeader(conn, "Access-Control-Allow-Origin", "*");
-	AddHeader(conn, "Access-Control-Allow-Methods", "GET, POST, PUT");
-	AddHeader(conn, "Connection", "close");
-	EndHeaders(conn);
+	StartResponseJson(conn);
 
 	httpdSend(conn,"{\"ports\":{", -1);
 
@@ -57,6 +64,70 @@ void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 	xmitSendBuff(conn);
 
 }
+
+void ICACHE_FLASH_ATTR doGetEvents(ServerConnData* conn)
+{
+	char buff[200];
+	char *p;
+	int i=0;
+
+	StartResponseJson(conn);
+
+	httpdSend(conn,"{\"Events\":{", -1);
+
+	for (i=0; i<MAX_POWER_EVENTS; i++)
+	{
+		os_sprintf(buff,"\"Start\":\"%d:%d\"", PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, -1);
+		httpdSend(conn,buff, -1);
+		os_sprintf(buff,"\"End\":\"%d:%d\"", PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min, -1);
+		httpdSend(conn,buff, -1);
+
+		if (i < NUM_OF_OUTPUT_PORTS-1)
+	   	{
+			httpdSend(conn,",", -1);
+	   	}
+	}
+	httpdSend(conn,"}}", -1);
+
+	xmitSendBuff(conn);
+
+}
+
+void ICACHE_FLASH_ATTR doSetEvent(ServerConnData* conn)
+{
+	// getevent/ID/STARTTIME(HH:MM)/endtime(HH:MM)/REPEATEVERYDAY
+	char buff[256];
+	os_printf("doSetEvent\r\n");
+	char tmp[120];
+	char tmp2[10];
+	int idx;
+
+    getValue(tmp, conn->url,'/',2);
+    os_printf("IDX = %s", tmp);
+    idx = atoi(tmp);
+
+	// get startTime
+    getValue(tmp, conn->url,'/',3);
+    getValue(tmp2, tmp,':',0); // hours
+    PowerEvents[idx].StartTime.Hour = atoi(tmp2);
+    getValue(tmp2, tmp,':',1); // min
+    PowerEvents[idx].StartTime.Min = atoi(tmp2);
+
+    //get endTime
+    getValue(tmp, conn->url,'/',4);
+    getValue(tmp2, tmp,':',0); // hours
+    PowerEvents[idx].EndTime.Hour = atoi(tmp2);
+    getValue(tmp2, tmp,':',1); // min
+    PowerEvents[idx].EndTime.Min = atoi(tmp2);
+
+    //get repeat
+    getValue(tmp, conn->url,'/',5);
+    //PowerEvents[idx].DaysRepeat = (Days)atoi(tmp);
+
+    flash_write();
+    doGetEvents(conn);
+}
+
 
 void ICACHE_FLASH_ATTR doSetWifi(ServerConnData* conn)
 {
@@ -78,12 +149,11 @@ void ICACHE_FLASH_ATTR doSetWifi(ServerConnData* conn)
 	os_sprintf(buff,"{'ssid':'%s', 'pass':'%s...'}", flashData->ssid, paramPASS);
 
 	flashData->magic = MAGIC_NUM;
-    
+
 	flash_write();
     SendHTTPResponse(conn, buff);
-
-
 }
+
 void ICACHE_FLASH_ATTR doGetWifi(ServerConnData* conn)
 {
 	char buff[256];

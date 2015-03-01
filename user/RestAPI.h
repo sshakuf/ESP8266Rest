@@ -24,13 +24,10 @@ void ICACHE_FLASH_ATTR doGetWifi(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doStatus(ServerConnData* conn);
-
+void ICACHE_FLASH_ATTR doGetEvents(ServerConnData* conn);
+void ICACHE_FLASH_ATTR doSetEvent(ServerConnData* conn);
 
 RestPtrs* RestPtrsTable;
-
-#define NUMOFCOMMANDS 5
-
-
 
 
 #endif //RESTAPI_H
