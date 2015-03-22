@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "sntp.h"   
+
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
@@ -57,13 +59,47 @@ void some_timerfunc(void *arg)
     }
 }
 
+uint32 stime=0;
+int gSec=0;
+
 //Main code function
 static void ICACHE_FLASH_ATTR
 loop(os_event_t *events)
 {
+	struct tm *info;
+	char buffer[80];
+
+	uint32 tmp = 0;
     //os_printf("loop\n\r");
     os_delay_us(10000);
+
+    tmp = system_get_time();
+    if (tmp - stime > 5000000) // 5 sec has passed
+    {
+        stime = tmp;
+    	gSec++;
+    	//os_printf("Sec=%d\n", gSec);
+
+//    	  char tmp[100];
+//    	  os_sprintf(tmp,"Time: %s GMT%s%02d\n",epoch_to_str(sntp_time+(sntp_tz*3600)),sntp_tz > 0 ? "+" : "",sntp_tz);
+//    	  os_printf("%s\n",tmp);
+    	OneSecLoop();
+    }
+
+
+
     system_os_post(user_procTaskPrio, 0, 0 );
+}
+
+bool ICACHE_FLASH_ATTR IsStationConnected()
+{
+	  struct ip_info ipconfig;
+
+	  wifi_get_ip_info(STATION_IF, &ipconfig);
+	  if (wifi_station_get_connect_status() == STATION_GOT_IP && ipconfig.ip.addr != 0) {
+		  return true;
+	  }
+	  return false;
 }
 
 static void ICACHE_FLASH_ATTR networkConnectedCb(void *arg);
@@ -75,7 +111,7 @@ void ICACHE_FLASH_ATTR network_init();
 
 LOCAL os_timer_t network_timer;
 
-static void ICACHE_FLASH_ATTR networkServerFoundCb(const char *name, ip_addr_t *ip, void *arg) {
+static void ICACHE_FLASH_ATTR networkTimeFoundCb(const char *name, ip_addr_t *ip, void *arg) {
   static esp_tcp tcp;
   struct espconn *conn=(struct espconn *)arg;
   if (ip==NULL) {
@@ -145,12 +181,12 @@ static void ICACHE_FLASH_ATTR networkDisconCb(void *arg) {
 }
 
 
-void ICACHE_FLASH_ATTR network_start() {
+void ICACHE_FLASH_ATTR GetNetworkTime() {
   static struct espconn conn;
   static ip_addr_t ip;
   os_printf("Looking up server...\n");
     os_printf("look");
-  espconn_gethostbyname(&conn, "www.google.com", &ip, networkServerFoundCb);
+  espconn_gethostbyname(&conn, "www.google.com", &ip, networkTimeFoundCb);
 }
 
 void ICACHE_FLASH_ATTR SetSetverMode()
@@ -182,7 +218,9 @@ void ICACHE_FLASH_ATTR network_check_ip(void) {
 
     ServerInit(80);
 
-    //network_start();
+    //GetNetworkTime();
+    sntp_init(2);
+
   } else {
     counter++;
     os_printf("No ip found\n\r");
@@ -258,16 +296,22 @@ void ICACHE_FLASH_ATTR flash_write() {
 void ICACHE_FLASH_ATTR flash_read() {
     os_printf("flashRead() size-%d\n", sizeof(FlashData));
 
+    flashData->magic =0;
     ETS_UART_INTR_DISABLE();
     spi_flash_read((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
                 (uint32 *)flashData, sizeof(FlashData));
     ETS_UART_INTR_ENABLE();
+    if (flashData->magic != MAGIC_NUM)
+    {
+    	os_printf("ReadFlash succeed!\n");
+    }
 }
+
 //Init function 
 void ICACHE_FLASH_ATTR user_init() {
 
     //uart_init(BIT_RATE_115200,BIT_RATE_115200);
-    flashData =&_flashData;
+    flashData = &_flashData;
     IPStation = ipstation;
 
     stdoutInit();
@@ -277,6 +321,7 @@ void ICACHE_FLASH_ATTR user_init() {
 
 
     os_printf("\ninit\n");
+
 
     user_init_gpio();
     //Set station mode & AP mode

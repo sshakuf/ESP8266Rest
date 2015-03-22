@@ -79,20 +79,25 @@ void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator
 void ICACHE_FLASH_ATTR ParseURLCommand(char *h, ServerConnData* conn) {
 	char* pb = conn->url;
 	int idx;
-	char param[20];
+	char param[30];
 	// if (strncmp(pb, "GET /", 5) == 0) {
  //        pb +=5;
         
         getValue(param, conn->url,'/',1);
-        os_printf("Rest Command recived- %s\n", param);
+        os_printf("URL command recived - %s\n", param);
 
         bool handeled = false;
         idx = 0;
         while  (idx < 15) // just in case no more then 15 commands
         {
-        	//os_printf("verifyCommand %s\n", RestPtrsTable[idx].command);
+        	os_printf("check %d ", idx);
+        	void * p = &RestPtrsTable[idx];
+        	os_printf("address %d ", p);
+
+        	os_printf(" command recived- %s\n", RestPtrsTable[idx].command);
           if (strcmp(param,RestPtrsTable[idx].command) == 0)
           {
+            os_printf("Executing Rest Command recived- %s\n", param);
             RestPtrsTable[idx].f(conn);
             handeled = true;
             break;

@@ -10,8 +10,11 @@
 #include "mem.h"
 #include "osapi.h"
 
+#include "time_utils.h"
+
 #include <string.h>
 
+bool portsVal[NUM_OF_OUTPUT_PORTS];
 
 //PowerEvent _PowerEvents[MAX_POWER_EVENTS];
 PowerEvent* PowerEvents;
@@ -24,6 +27,7 @@ RestPtrs _RestPtrsTable[] = {
   {"getwifi", &doGetWifi},
   {"events", &doGetEvents},
   {"event", &doSetEvent},
+  {"time", &doGetTime},
 
   {"END", &doStatus} // end of commands
 
@@ -32,12 +36,67 @@ RestPtrs _RestPtrsTable[] = {
 void ICACHE_FLASH_ATTR InitializeRest()
 {
 	RestPtrsTable = _RestPtrsTable;
-	PowerEvents =  flashData->_PowerEvents;
+	PowerEvents =  &flashData->_PowerEvents[0];
 
 	// todo: loadevents from EEPROM
 }
 
 uint32 portsBits[NUM_OF_OUTPUT_PORTS] = {BIT5,BIT0};
+
+void ICACHE_FLASH_ATTR OneSecLoop()
+{
+	int i=0;
+	PowerEvents =  &flashData->_PowerEvents[0];
+	os_printf("flashData = %p, powerEvents = %p\n", flashData, PowerEvents);
+	os_printf("OneSecLoop ");
+	DateTime now = Now();
+	for (i=0; i < MAX_TIMED_POWER_EVENTS; i++)
+	{
+		int inputNum = PowerEvents[i].Port;
+		if (inputNum >= 0 && inputNum < NUM_OF_OUTPUT_PORTS)
+		{
+			if ((PowerEvents[i].StartTime.Hour == now.hour) && PowerEvents[i].StartTime.Min == now.min)
+			{
+					// output pin on
+					//Set GPIO2 to HIGH
+					os_printf("Event On Occurred - %d, Start %d:%d End %d:%d\n",i, PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min);
+					gpio_output_set(portsBits[inputNum], 0, portsBits[inputNum], 0);
+					os_printf("portsVal = %p, inputNum = %d,   portsVal[numInput]=%p \n", portsVal, inputNum, &portsVal[inputNum]);
+					portsVal[inputNum] = 1;
+			}
+			else if ((PowerEvents[i].EndTime.Hour == now.hour) && PowerEvents[i].EndTime.Min == now.min)
+			{
+					// output pin off
+					//Set GPIO2 to LOW
+					os_printf("Event Off Occurred - %d, Start %d:%d End %d:%d\n",i, PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min);
+					gpio_output_set(0, portsBits[inputNum], portsBits[inputNum], 0);
+					portsVal[inputNum] = 0;
+			}
+		}
+	}
+	os_printf(" end\n");
+
+}
+
+void ICACHE_FLASH_ATTR doGetTime(ServerConnData* conn)
+{
+		char buff[50];
+		char *p;
+		int i=0;
+
+		StartResponseJson(conn);
+
+		httpdSend(conn,"{\"time\":{", -1);
+
+
+//			os_sprintf(buff,"\"RL%d\":\"%d\"", i, portsVal[i], -1);
+			os_sprintf(buff,"%s GMT%s%02d\"",epoch_to_str(sntp_time+(sntp_tz*3600)),sntp_tz > 0 ? "+" : "",sntp_tz);
+			httpdSend(conn,buff, -1);
+
+		httpdSend(conn,"}}", -1);
+
+		xmitSendBuff(conn);
+}
 
 void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 {
@@ -75,11 +134,13 @@ void ICACHE_FLASH_ATTR doGetEvents(ServerConnData* conn)
 
 	httpdSend(conn,"{\"Events\":{", -1);
 
-	for (i=0; i<MAX_POWER_EVENTS; i++)
+	for (i=0; i<MAX_TIMED_POWER_EVENTS; i++)
 	{
-		os_sprintf(buff,"\"Start\":\"%d:%d\"", PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, -1);
+		os_sprintf(buff,"\"Port\":\"%d\",", PowerEvents[i].Port, -1);
 		httpdSend(conn,buff, -1);
-		os_sprintf(buff,"\"End\":\"%d:%d\"", PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min, -1);
+		os_sprintf(buff,"\"Start\":\"%2d:%2d\",", PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, -1);
+		httpdSend(conn,buff, -1);
+		os_sprintf(buff,"\"End\":\"%2d:%2d\"", PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min, -1);
 		httpdSend(conn,buff, -1);
 
 		if (i < NUM_OF_OUTPUT_PORTS-1)
@@ -95,7 +156,7 @@ void ICACHE_FLASH_ATTR doGetEvents(ServerConnData* conn)
 
 void ICACHE_FLASH_ATTR doSetEvent(ServerConnData* conn)
 {
-	// getevent/ID/STARTTIME(HH:MM)/endtime(HH:MM)/REPEATEVERYDAY
+	// getevent/ID/PORT/STARTTIME(HH:MM)/endtime(HH:MM)/REPEATEVERYDAY
 	char buff[256];
 	os_printf("doSetEvent\r\n");
 	char tmp[120];
@@ -106,22 +167,26 @@ void ICACHE_FLASH_ATTR doSetEvent(ServerConnData* conn)
     os_printf("IDX = %s", tmp);
     idx = atoi(tmp);
 
-	// get startTime
     getValue(tmp, conn->url,'/',3);
+    os_printf("port = %s", tmp);
+    PowerEvents[idx].Port = atoi(tmp);
+
+	// get startTime
+    getValue(tmp, conn->url,'/',4);
     getValue(tmp2, tmp,':',0); // hours
     PowerEvents[idx].StartTime.Hour = atoi(tmp2);
     getValue(tmp2, tmp,':',1); // min
     PowerEvents[idx].StartTime.Min = atoi(tmp2);
 
     //get endTime
-    getValue(tmp, conn->url,'/',4);
+    getValue(tmp, conn->url,'/',5);
     getValue(tmp2, tmp,':',0); // hours
     PowerEvents[idx].EndTime.Hour = atoi(tmp2);
     getValue(tmp2, tmp,':',1); // min
     PowerEvents[idx].EndTime.Min = atoi(tmp2);
 
     //get repeat
-    getValue(tmp, conn->url,'/',5);
+    getValue(tmp, conn->url,'/',6);
     //PowerEvents[idx].DaysRepeat = (Days)atoi(tmp);
 
     flash_write();

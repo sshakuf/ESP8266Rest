@@ -9,13 +9,16 @@
 
 
 #define NUM_OF_OUTPUT_PORTS 2
-bool portsVal[NUM_OF_OUTPUT_PORTS];
+extern bool portsVal[NUM_OF_OUTPUT_PORTS];
 
 typedef struct 
 {
   char* command;
   void(*f)(ServerConnData* conn);
 } RestPtrs;
+
+void ICACHE_FLASH_ATTR OneSecLoop();
+
 
 void ICACHE_FLASH_ATTR InitializeRest();
 void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn);
@@ -26,6 +29,7 @@ void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doStatus(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doGetEvents(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doSetEvent(ServerConnData* conn);
+void ICACHE_FLASH_ATTR doGetTime(ServerConnData* conn);
 
 RestPtrs* RestPtrsTable;
 

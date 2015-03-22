@@ -1,8 +1,9 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include "c_types.h"
 
-//#define SSID "STRS1"
+//#define SSID "STRS"
 //#define SSID_PASSWORD "1011040311037"
 #define SSID "CheggBackupHot"
 #define SSID_PASSWORD "Ch399!M3"
@@ -45,7 +46,7 @@ typedef struct
 	int Port;
 }PowerEvent;
 
-#define MAX_POWER_EVENTS 10
+#define MAX_TIMED_POWER_EVENTS 10
 
 //__declspec(align(4))  // needs to align ? 
 typedef union _DWORD_PART_ {
@@ -55,7 +56,7 @@ typedef union _DWORD_PART_ {
         int magic;
         char ssid[32];
         char password[64];
-        PowerEvent _PowerEvents[MAX_POWER_EVENTS];
+        PowerEvent _PowerEvents[MAX_TIMED_POWER_EVENTS];
     } ;
 } FlashData;
 
@@ -65,5 +66,7 @@ typedef union _DWORD_PART_ {
 
 FlashData* flashData;
 char* IPStation;
+
+bool ICACHE_FLASH_ATTR IsStationConnected();
 
 #endif //COMMON_H
