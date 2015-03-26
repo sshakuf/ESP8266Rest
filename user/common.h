@@ -3,12 +3,10 @@
 
 #include "c_types.h"
 
-//#define SSID "STRS"
-//#define SSID_PASSWORD "1011040311037"
-#define SSID "CheggBackupHot"
-#define SSID_PASSWORD "Ch399!M3"
-//#define SSID "klar_wifi"
-//#define SSID_PASSWORD "idonoa2013"
+#define SSID "STRS1"
+#define SSID_PASSWORD "1011040311037"
+//#define SSID "CheggBackupHot"
+//#define SSID_PASSWORD "Ch399!M3"
 
 #define AP_SSID "ESP"
 #define AP_PASSWORD "12341234"
@@ -44,6 +42,7 @@ typedef struct
 	Time EndTime;
 	Days DaysRepeat;
 	int Port;
+	bool Active;
 }PowerEvent;
 
 #define MAX_TIMED_POWER_EVENTS 10

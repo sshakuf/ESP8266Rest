@@ -47,8 +47,9 @@ void ICACHE_FLASH_ATTR OneSecLoop()
 {
 	int i=0;
 	PowerEvents =  &flashData->_PowerEvents[0];
-	os_printf("flashData = %p, powerEvents = %p\n", flashData, PowerEvents);
 	os_printf("OneSecLoop ");
+	os_printf("%s GMT%s%02d\" ",epoch_to_str(sntp_time+(sntp_tz*3600)),sntp_tz > 0 ? "+" : "",sntp_tz);
+
 	DateTime now = Now();
 	for (i=0; i < MAX_TIMED_POWER_EVENTS; i++)
 	{
@@ -61,7 +62,6 @@ void ICACHE_FLASH_ATTR OneSecLoop()
 					//Set GPIO2 to HIGH
 					os_printf("Event On Occurred - %d, Start %d:%d End %d:%d\n",i, PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min);
 					gpio_output_set(portsBits[inputNum], 0, portsBits[inputNum], 0);
-					os_printf("portsVal = %p, inputNum = %d,   portsVal[numInput]=%p \n", portsVal, inputNum, &portsVal[inputNum]);
 					portsVal[inputNum] = 1;
 			}
 			else if ((PowerEvents[i].EndTime.Hour == now.hour) && PowerEvents[i].EndTime.Min == now.min)
@@ -74,7 +74,7 @@ void ICACHE_FLASH_ATTR OneSecLoop()
 			}
 		}
 	}
-	os_printf(" end\n");
+	os_printf(" - end\n");
 
 }
 
@@ -132,61 +132,79 @@ void ICACHE_FLASH_ATTR doGetEvents(ServerConnData* conn)
 
 	StartResponseJson(conn);
 
-	httpdSend(conn,"{\"Events\":{", -1);
+	httpdSend(conn,"{\"Events\":[", -1);
 
 	for (i=0; i<MAX_TIMED_POWER_EVENTS; i++)
 	{
-		os_sprintf(buff,"\"Port\":\"%d\",", PowerEvents[i].Port, -1);
+		//(v.id , v.input, v.Start, v.End, v.Interval, v.Active);
+		os_sprintf(buff,"{\"%s\":\"%d\",", "id", i, -1);
+		httpdSend(conn,buff, -1);
+		os_sprintf(buff,"\"%s\":\"%d\",", "Active", PowerEvents[i].Active, -1);
+		httpdSend(conn,buff, -1);
+		os_sprintf(buff,"\"%s\":\"%d\",", "input", PowerEvents[i].Port, -1);
+		httpdSend(conn,buff, -1);
+		os_sprintf(buff,"\"%s\":\"%d\",", "Interval", PowerEvents[i].DaysRepeat, -1);
 		httpdSend(conn,buff, -1);
 		os_sprintf(buff,"\"Start\":\"%2d:%2d\",", PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, -1);
 		httpdSend(conn,buff, -1);
-		os_sprintf(buff,"\"End\":\"%2d:%2d\"", PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min, -1);
+		os_sprintf(buff,"\"End\":\"%2d:%2d\"}", PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min, -1);
 		httpdSend(conn,buff, -1);
 
-		if (i < NUM_OF_OUTPUT_PORTS-1)
+		if (i < MAX_TIMED_POWER_EVENTS-1)
 	   	{
 			httpdSend(conn,",", -1);
 	   	}
 	}
-	httpdSend(conn,"}}", -1);
+	httpdSend(conn,"]}", -1);
 
 	xmitSendBuff(conn);
 
 }
 
 void ICACHE_FLASH_ATTR doSetEvent(ServerConnData* conn)
-{
-	// getevent/ID/PORT/STARTTIME(HH:MM)/endtime(HH:MM)/REPEATEVERYDAY
+{	// TODO: need to add validation and error handeling
+
+	// getevent/ID/ACTIVE/PORT/STARTTIME(HH:MM)/endtime(HH:MM)/REPEATEVERYDAY
 	char buff[256];
 	os_printf("doSetEvent\r\n");
 	char tmp[120];
 	char tmp2[10];
 	int idx;
+	int i=2;
 
-    getValue(tmp, conn->url,'/',2);
+    getValue(tmp, conn->url,'/',i);
     os_printf("IDX = %s", tmp);
     idx = atoi(tmp);
 
-    getValue(tmp, conn->url,'/',3);
+    i++;
+    getValue(tmp, conn->url,'/',i);
+    os_printf("Active = %s", tmp);
+    PowerEvents[idx].Active = atoi(tmp);
+
+    i++;
+    getValue(tmp, conn->url,'/',i);
     os_printf("port = %s", tmp);
     PowerEvents[idx].Port = atoi(tmp);
 
 	// get startTime
-    getValue(tmp, conn->url,'/',4);
+    i++;
+    getValue(tmp, conn->url,'/',i);
     getValue(tmp2, tmp,':',0); // hours
     PowerEvents[idx].StartTime.Hour = atoi(tmp2);
     getValue(tmp2, tmp,':',1); // min
     PowerEvents[idx].StartTime.Min = atoi(tmp2);
 
     //get endTime
-    getValue(tmp, conn->url,'/',5);
+    i++;
+    getValue(tmp, conn->url,'/',i);
     getValue(tmp2, tmp,':',0); // hours
     PowerEvents[idx].EndTime.Hour = atoi(tmp2);
     getValue(tmp2, tmp,':',1); // min
     PowerEvents[idx].EndTime.Min = atoi(tmp2);
 
     //get repeat
-    getValue(tmp, conn->url,'/',6);
+    i++;
+    getValue(tmp, conn->url,'/',i);
     //PowerEvents[idx].DaysRepeat = (Days)atoi(tmp);
 
     flash_write();
