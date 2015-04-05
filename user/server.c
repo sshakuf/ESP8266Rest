@@ -90,12 +90,12 @@ void ICACHE_FLASH_ATTR ParseURLCommand(char *h, ServerConnData* conn) {
         idx = 0;
         while  (idx < 15) // just in case no more then 15 commands
         {
-        	os_printf("check %d ", idx);
+        	//os_printf("check %d ", idx);
         	void * p = &RestPtrsTable[idx];
-        	os_printf("address %d ", p);
+        	//os_printf("address %d ", p);
+        	//os_printf(" command recived- %s\n", RestPtrsTable[idx].command);
 
-        	os_printf(" command recived- %s\n", RestPtrsTable[idx].command);
-          if (strcmp(param,RestPtrsTable[idx].command) == 0)
+        	if (strcmp(param,RestPtrsTable[idx].command) == 0)
           {
             os_printf("Executing Rest Command recived- %s\n", param);
             RestPtrsTable[idx].f(conn);

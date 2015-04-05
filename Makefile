@@ -19,7 +19,9 @@ SDK_BASE	?= /opt/Espressif/ESP8266_SDK
 
 #Esptool.py path and port
 ESPTOOL		?= python /usr/bin/esptool.py
-ESPPORT		?= /dev/tty.usbserial-A98BVL9T
+
+# ESPPORT		?= /dev/tty.usbserial-A98BVL9T
+ESPPORT		?= /dev/tty.usbserial-A9ITT3JN
 
 # name for the target project
 TARGET		= app
@@ -103,7 +105,7 @@ endef
 
 .PHONY: all checkdirs flash clean
 
-all: checkdirs $(TARGET_OUT) $(FW_FILE_1) $(FW_FILE_2)
+all: clean checkdirs $(TARGET_OUT) $(FW_FILE_1) $(FW_FILE_2)
 
 $(FW_FILE_1): $(TARGET_OUT)
 	$(vecho) "FW $@"

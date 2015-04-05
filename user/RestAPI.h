@@ -7,9 +7,9 @@
 #include <espconn.h>
 #include "server.h"
 
+#include "common.h"
 
-#define NUM_OF_OUTPUT_PORTS 2
-extern bool portsVal[NUM_OF_OUTPUT_PORTS];
+extern bool portsVal[NUM_OF_PORTS];
 
 typedef struct 
 {
@@ -30,6 +30,9 @@ void ICACHE_FLASH_ATTR doStatus(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doGetEvents(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doSetEvent(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doGetTime(ServerConnData* conn);
+void ICACHE_FLASH_ATTR doGetPorts(ServerConnData* conn);
+void ICACHE_FLASH_ATTR doSetPorts(ServerConnData* conn);
+void ICACHE_FLASH_ATTR doInitialize(ServerConnData* conn);
 
 RestPtrs* RestPtrsTable;
 

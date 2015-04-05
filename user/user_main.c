@@ -42,6 +42,7 @@ static volatile os_timer_t some_timer;
 //     va_end( args );
 // }
 
+#include "thingspeak.h"
 
 
 
@@ -84,6 +85,7 @@ loop(os_event_t *events)
 //    	  os_sprintf(tmp,"Time: %s GMT%s%02d\n",epoch_to_str(sntp_time+(sntp_tz*3600)),sntp_tz > 0 ? "+" : "",sntp_tz);
 //    	  os_printf("%s\n",tmp);
     	OneSecLoop();
+
     }
 
 
@@ -218,6 +220,7 @@ void ICACHE_FLASH_ATTR network_check_ip(void) {
 
     ServerInit(80);
 
+
     //GetNetworkTime();
     sntp_init(2);
 
@@ -307,6 +310,19 @@ void ICACHE_FLASH_ATTR flash_read() {
     }
 }
 
+void ICACHE_FLASH_ATTR initFlash()
+{	// demo data for new devices.
+	PortInfo* ports = &flashData->Ports[0];
+
+	flashData->Ports[0].PortPinNumber = 5;
+	flashData->Ports[0].Type = PORT_OUTPUT;
+	strncpy(&flashData->Ports[0].PortName[0], "output1", 20);
+
+	flashData->Ports[1].PortPinNumber = 0;
+	flashData->Ports[1].Type = PORT_OUTPUT;
+	strncpy(&flashData->Ports[1].PortName[0], "output2", 20);
+}
+
 //Init function 
 void ICACHE_FLASH_ATTR user_init() {
 
@@ -328,6 +344,7 @@ void ICACHE_FLASH_ATTR user_init() {
     // wifi_set_opmode(STATION_MODE);
     wifi_set_opmode(STATIONAP_MODE);
 
+    initFlash();
     flash_read();
 
     //if (flashData->magic != MAGIC_NUM)

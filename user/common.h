@@ -45,17 +45,34 @@ typedef struct
 	bool Active;
 }PowerEvent;
 
+typedef enum
+{
+	PORT_INPUT,
+	PORT_OUTPUT,
+
+}PortType;
+
+typedef struct
+{
+	int PortPinNumber;
+	PortType Type;
+	char PortName[20];
+}PortInfo;
+
 #define MAX_TIMED_POWER_EVENTS 10
+#define NUM_OF_PORTS 2
+
 
 //__declspec(align(4))  // needs to align ? 
 typedef union _DWORD_PART_ {
-    char settings[128];
+    char settings[128*8];
 
     struct {
         int magic;
         char ssid[32];
         char password[64];
         PowerEvent _PowerEvents[MAX_TIMED_POWER_EVENTS];
+        PortInfo Ports[NUM_OF_PORTS];
     } ;
 } FlashData;
 

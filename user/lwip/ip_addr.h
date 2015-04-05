@@ -96,15 +96,21 @@ extern const ip_addr_t ip_addr_broadcast;
 /** IP_ADDR_ can be used as a fixed IP address
  *  for the wildcard and the broadcast address
  */
+#ifndef IP_ADDR_ANY
 #define IP_ADDR_ANY         ((ip_addr_t *)&ip_addr_any)
+#endif
 #define IP_ADDR_BROADCAST   ((ip_addr_t *)&ip_addr_broadcast)
 
 /** 255.255.255.255 */
+#ifndef IPADDR_NONE
 #define IPADDR_NONE         ((u32_t)0xffffffffUL)
+#endif
 /** 127.0.0.1 */
 #define IPADDR_LOOPBACK     ((u32_t)0x7f000001UL)
 /** 0.0.0.0 */
+ #ifndef IP_ADDR_ANY
 #define IPADDR_ANY          ((u32_t)0x00000000UL)
+ #endif
 /** 255.255.255.255 */
 #define IPADDR_BROADCAST    ((u32_t)0xffffffffUL)
 

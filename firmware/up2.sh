@@ -1,1 +1,0 @@
-sudo esptool.py write_flash 0x40000 0x40000.bin
