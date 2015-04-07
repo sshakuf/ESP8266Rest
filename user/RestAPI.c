@@ -33,6 +33,7 @@ RestPtrs _RestPtrsTable[] = {
   {"portsinfo", &doGetPorts},
   {"portinfo", &doSetPorts},
   {"initialize", &doInitialize},
+  {"sntp", &doSNTP},
 
   {"END", &doStatus} // end of commands
 
@@ -48,8 +49,8 @@ void ICACHE_FLASH_ATTR InitializeRest()
 	// todo: loadevents from EEPROM
 }
 
-uint32 portsBits[NUM_OF_PORTS] = {BIT4,BIT5};
-int PortPinNumber[NUM_OF_PORTS] = {4,5};
+uint32 portsBits[NUM_OF_PORTS] = {BIT0,BIT1,BIT2,BIT3,BIT4,BIT5,BIT6,BIT7};
+int PortPinNumber[NUM_OF_PORTS] = {0,1,2,3,4,5,6,7};
 
 bool ICACHE_FLASH_ATTR IsTimeInside(Time start, Time end, Time current)
 {
@@ -94,26 +95,29 @@ void ICACHE_FLASH_ATTR OneSecLoop()
 
 	for (i=0; i < NUM_OF_PORTS; i++)
 	{
-		portsValtmp[i] = 0;
+		portsValtmp[i] = portsVal[i];
 	}
 
 	for (i=0; i < MAX_TIMED_POWER_EVENTS; i++)
 	{
 		int inputNum = PowerEvents[i].Port;
-		if (inputNum >= 0 && inputNum < NUM_OF_PORTS && PowerEvents[i].Active != 0)
+		if (PowerEvents[i].Active != 0)
 		{
-			if (IsTimeInside(PowerEvents[i].StartTime, PowerEvents[i].EndTime, curr))
+			if (inputNum >= 0 && inputNum < NUM_OF_PORTS)
 			{
-				os_printf("Event On Occurred - %d, Start %d:%d End %d:%d\n",i, PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min);
+				if (IsTimeInside(PowerEvents[i].StartTime, PowerEvents[i].EndTime, curr))
+				{
+					os_printf("Event On Occurred - %d, Start %d:%d End %d:%d\n",i, PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min);
 
-				portsValtmp[inputNum] = 1;
-			}
-			else if (portsValtmp[inputNum] != 1) // there might be other events that set it to high
-			{
-				os_printf("Event Off Occurred - %d, Start %d:%d End %d:%d\n",i, PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min);
-				portsValtmp[inputNum] = 0;
-			}
+					portsValtmp[inputNum] = 1;
+				}
+				else if (portsValtmp[inputNum] != 1) // there might be other events that set it to high
+				{
+					os_printf("Event Off Occurred - %d, Start %d:%d End %d:%d\n",i, PowerEvents[i].StartTime.Hour, PowerEvents[i].StartTime.Min, PowerEvents[i].EndTime.Hour, PowerEvents[i].EndTime.Min);
+					portsValtmp[inputNum] = 0;
+				}
 
+			}
 		}
 	}
 
@@ -148,6 +152,7 @@ void ICACHE_FLASH_ATTR doInitialize(ServerConnData* conn)
 	int i, idx;
 	char tmp[20];
 	PortInfo* ports = &flashData->Ports[0];
+	flashData->SNTP = 3;
 
 	// initialize ports
 	for (i=0; i < NUM_OF_PORTS; i++)
@@ -244,6 +249,37 @@ void ICACHE_FLASH_ATTR doSetPorts(ServerConnData* conn)
     doGetPorts(conn);
 }
 
+void ICACHE_FLASH_ATTR doSNTP(ServerConnData* conn)
+{
+	// port/id/name
+	char buff[10];
+	os_printf("doSetPort\r\n");
+	char tmp[10];
+	int idx;
+	int i=2;
+
+    if (getValue(tmp, conn->url,'/',i))
+    {
+		os_printf("SNTP = %s", tmp);
+		idx = atoi(tmp);
+
+    	flashData->SNTP = idx;
+        flash_write();
+    }
+
+
+	StartResponseJson(conn);
+
+	httpdSend(conn,"{\"sntp\":", -1);
+
+	os_sprintf(buff,"\"%d\"", flashData->SNTP, -1);
+	httpdSend(conn,buff, -1);
+	httpdSend(conn,"}", -1);
+
+	xmitSendBuff(conn);
+
+
+}
 
 void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 {
@@ -258,7 +294,7 @@ void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 
 	for (i=0; i<NUM_OF_PORTS; i++)
 	{
-		os_sprintf(buff,"\"RL%d\":\"%d\"", i, portsVal[i], -1);
+		os_sprintf(buff,"\"%s\":\"%d\"", &flashData->Ports[i].PortName[0], portsVal[i], -1);
 		httpdSend(conn,buff, -1);
 		if (i < NUM_OF_PORTS-1)
 	   	{

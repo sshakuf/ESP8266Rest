@@ -33,6 +33,8 @@ void ICACHE_FLASH_ATTR doGetTime(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doGetPorts(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doSetPorts(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doInitialize(ServerConnData* conn);
+void ICACHE_FLASH_ATTR doSNTP(ServerConnData* conn);
+
 
 RestPtrs* RestPtrsTable;
 

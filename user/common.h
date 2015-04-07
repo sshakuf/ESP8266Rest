@@ -3,10 +3,12 @@
 
 #include "c_types.h"
 
-#define SSID "STRS1"
-#define SSID_PASSWORD "1011040311037"
-//#define SSID "CheggBackupHot"
-//#define SSID_PASSWORD "Ch399!M3"
+//#define SSID "STRS1"
+//#define SSID_PASSWORD "1011040311037"
+#define SSID "CheggBackupHot"
+#define SSID_PASSWORD "Ch399!M3"
+//#define SSID "klar_wifi"
+//#define SSID_PASSWORD "idonoa2013"
 
 #define AP_SSID "ESP"
 #define AP_PASSWORD "12341234"
@@ -60,7 +62,7 @@ typedef struct
 }PortInfo;
 
 #define MAX_TIMED_POWER_EVENTS 10
-#define NUM_OF_PORTS 2
+#define NUM_OF_PORTS 8
 
 
 //__declspec(align(4))  // needs to align ? 
@@ -73,6 +75,7 @@ typedef union _DWORD_PART_ {
         char password[64];
         PowerEvent _PowerEvents[MAX_TIMED_POWER_EVENTS];
         PortInfo Ports[NUM_OF_PORTS];
+        int SNTP;
     } ;
 } FlashData;
 

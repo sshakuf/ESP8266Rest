@@ -12,7 +12,7 @@
 #include <string.h>
 
 void ICACHE_FLASH_ATTR ThingSpeak() {
-	OpenURL("api.thingspeak.com");
+//	OpenURL("api.thingspeak.com");
 }
 
 

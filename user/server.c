@@ -56,7 +56,7 @@ void ICACHE_FLASH_ATTR SendHTTPResponse(ServerConnData* conn, char* msg)
 }
 
 
-void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator, int index)
+int ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator, int index)
 {
   int found = 0;
   int i=0;
@@ -73,6 +73,13 @@ void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator
   strncpy(retParam, &data[strIndex[0]],(size_t)size );
   retParam[size] = '\0';
   os_printf("\nget %d param (0=%d,1=%d): [%s]\n", index, strIndex[0], strIndex[1], retParam);
+
+  if (found < index)
+   {
+ 	  return -1;
+   }
+
+   return size;
 }
 
 

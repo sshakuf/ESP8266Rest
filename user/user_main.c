@@ -222,7 +222,8 @@ void ICACHE_FLASH_ATTR network_check_ip(void) {
 
 
     //GetNetworkTime();
-    sntp_init(2);
+    os_printf("SNTP-----%d", flashData->SNTP);
+    sntp_init(flashData->SNTP);
 
   } else {
     counter++;
@@ -280,6 +281,23 @@ user_init_gpio()
 
 FlashData _flashData;
 
+void ICACHE_FLASH_ATTR initFlash()
+{	// demo data for new devices.
+	flashData->magic = MAGIC_NUM;
+
+	PortInfo* ports = &flashData->Ports[0];
+
+	flashData->Ports[0].PortPinNumber = 5;
+	flashData->Ports[0].Type = PORT_OUTPUT;
+	strncpy(&flashData->Ports[0].PortName[0], "output1", 20);
+
+	flashData->Ports[1].PortPinNumber = 0;
+	flashData->Ports[1].Type = PORT_OUTPUT;
+	strncpy(&flashData->Ports[1].PortName[0], "output2", 20);
+
+	flashData->SNTP = 3;
+}
+
 void ICACHE_FLASH_ATTR flash_write() {
     os_printf("flashWrite() size-%d\n", sizeof(FlashData));
     ETS_UART_INTR_DISABLE();
@@ -306,21 +324,9 @@ void ICACHE_FLASH_ATTR flash_read() {
     ETS_UART_INTR_ENABLE();
     if (flashData->magic != MAGIC_NUM)
     {
-    	os_printf("ReadFlash succeed!\n");
+    	os_printf("ReadFlash ERROR!\n");
+    	initFlash();
     }
-}
-
-void ICACHE_FLASH_ATTR initFlash()
-{	// demo data for new devices.
-	PortInfo* ports = &flashData->Ports[0];
-
-	flashData->Ports[0].PortPinNumber = 5;
-	flashData->Ports[0].Type = PORT_OUTPUT;
-	strncpy(&flashData->Ports[0].PortName[0], "output1", 20);
-
-	flashData->Ports[1].PortPinNumber = 0;
-	flashData->Ports[1].Type = PORT_OUTPUT;
-	strncpy(&flashData->Ports[1].PortName[0], "output2", 20);
 }
 
 //Init function 

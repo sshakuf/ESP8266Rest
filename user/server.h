@@ -31,7 +31,7 @@ void ICACHE_FLASH_ATTR StartResponse(ServerConnData *conn, int code);
 void ICACHE_FLASH_ATTR AddHeader(ServerConnData *conn, const char *field, const char *val);
 void ICACHE_FLASH_ATTR EndHeaders(ServerConnData *conn);
 void ICACHE_FLASH_ATTR StartResponseJson(ServerConnData *conn);
-void ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator, int index);
+int ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator, int index);
 
 
 
