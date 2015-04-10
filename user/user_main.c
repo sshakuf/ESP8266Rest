@@ -218,7 +218,7 @@ void ICACHE_FLASH_ATTR network_check_ip(void) {
     os_sprintf(ipstation, "%d.%d.%d.%d",IP2STR(&ipconfig.ip));
     os_printf(page_buffer);
 
-    ServerInit(80);
+    ServerInit(flashData->ServerPort);
 
 
     //GetNetworkTime();
@@ -238,7 +238,7 @@ void ICACHE_FLASH_ATTR network_check_ip(void) {
     {
         os_printf("could not connect to server\n", counter);
         wifi_station_disconnect();
-        ServerInit(80);
+        ServerInit(flashData->ServerPort);
 
         counter = 0;
     }
@@ -296,6 +296,7 @@ void ICACHE_FLASH_ATTR initFlash()
 	strncpy(&flashData->Ports[1].PortName[0], "output2", 20);
 
 	flashData->SNTP = 3;
+	flashData->ServerPort = 80;
 }
 
 void ICACHE_FLASH_ATTR flash_write() {

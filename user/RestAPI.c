@@ -21,20 +21,32 @@ bool portsVal[NUM_OF_PORTS];
 PowerEvent* PowerEvents;
 PortInfo* ports;
 
-RestPtrs _RestPtrsTable[] = { 
-  {"flipinput",&doFlipinput},
-  {"open", &doOpen},
-  {"status", &doStatus},
-  {"setwifi", &doSetWifi},
-  {"getwifi", &doGetWifi},
-  {"events", &doGetEvents},
-  {"event", &doSetEvent},
-  {"time", &doGetTime},
-  {"portsinfo", &doGetPorts},
-  {"portinfo", &doSetPorts},
-  {"initialize", &doInitialize},
-  {"sntp", &doSNTP},
+//ip/flipinput/portnum - flips a given input (0-7)
+//ip/open/portnum     - not working yet
+//ip/status         - returns the ports status
+//ip/events         - returns the events
+//ip/event/ID(0-7)/ACTIVE(0-1)/PORT(0-7)/STARTTIME(HH:MM)/endtime(HH:MM)/REPEATEVERYDAY(1)  - sets a given event
+//ip/time         - returns the time
+//ip/portsinfo/   - ports names
+//ip/portinfo/portname - 20chars      - sets a port name
+//ip/initialize     - intialize to default
+//ip/sntp           - show the sntp hours from GMT
+//ip/sntp/hoursfromGMT    set hours from GMT  ( for israel should be 3)
 
+RestPtrs _RestPtrsTable[] = { 
+  {"flipinput",&doFlipinput},		// ip/flipinput/portnum
+  {"open", &doOpen},				// ip/open/portnum
+  {"status", &doStatus},			// ip/status
+  {"setwifi", &doSetWifi},			// ip/setwifi/
+  {"getwifi", &doGetWifi},			// ip/getwifi/
+  {"events", &doGetEvents},			// ip/events
+  {"event", &doSetEvent},			// ip/event/ID(0-8)/ACTIVE(0-1)/PORT(0-8)/STARTTIME(HH:MM)/endtime(HH:MM)/REPEATEVERYDAY(1)
+  {"time", &doGetTime},				// ip/time
+  {"portsinfo", &doGetPorts},		// ip/portsinfo/
+  {"portinfo", &doSetPorts},		// ip/portinfo/portname - 20chars
+  {"initialize", &doInitialize},	// ip/initialize
+  {"sntp", &doSNTP},				// ip/sntp       or ip/sntp/hoursfromGMT
+  {"wifiport", &doWifiport},
   {"END", &doStatus} // end of commands
 
 };
@@ -49,8 +61,14 @@ void ICACHE_FLASH_ATTR InitializeRest()
 	// todo: loadevents from EEPROM
 }
 
+#ifdef ESP_1
+uint32 portsBits[NUM_OF_PORTS] = {BIT2};
+int PortPinNumber[NUM_OF_PORTS] = {2};
+#else
 uint32 portsBits[NUM_OF_PORTS] = {BIT0,BIT1,BIT2,BIT3,BIT4,BIT5,BIT6,BIT7};
 int PortPinNumber[NUM_OF_PORTS] = {0,1,2,3,4,5,6,7};
+#endif
+
 
 bool ICACHE_FLASH_ATTR IsTimeInside(Time start, Time end, Time current)
 {
@@ -153,6 +171,7 @@ void ICACHE_FLASH_ATTR doInitialize(ServerConnData* conn)
 	char tmp[20];
 	PortInfo* ports = &flashData->Ports[0];
 	flashData->SNTP = 3;
+	flashData->ServerPort = 80;
 
 	// initialize ports
 	for (i=0; i < NUM_OF_PORTS; i++)
@@ -347,7 +366,7 @@ void ICACHE_FLASH_ATTR doGetEvents(ServerConnData* conn)
 void ICACHE_FLASH_ATTR doSetEvent(ServerConnData* conn)
 {	// TODO: need to add validation and error handeling
 
-	// getevent/ID/ACTIVE/PORT/STARTTIME(HH:MM)/endtime(HH:MM)/REPEATEVERYDAY
+	// setevent/ID/ACTIVE/PORT/STARTTIME(HH:MM)/endtime(HH:MM)/REPEATEVERYDAY
 	char buff[256];
 	os_printf("doSetEvent\r\n");
 	char tmp[120];
@@ -396,7 +415,7 @@ void ICACHE_FLASH_ATTR doSetEvent(ServerConnData* conn)
 
 
 void ICACHE_FLASH_ATTR doSetWifi(ServerConnData* conn)
-{
+{	// ip/setwifi/SSID/pass
 	char buff[256];
 	os_printf("doSetWifi\r\n");
 	char paramSSID[120];
@@ -458,10 +477,75 @@ void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
     }
     SendPortStatus(conn);
 }
+
+
+LOCAL os_timer_t open_timer;
+
+void ICACHE_FLASH_ATTR setPortToLow(void* inputNum)
+{
+
+	//Set GPIO to LOW
+	gpio_output_set(0, portsBits[(int)inputNum], portsBits[(int)inputNum], 0);
+	portsVal[(int)inputNum] = 0;
+	os_printf("setPortToLow %d", (int)inputNum);
+}
+
 void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn)
 {
 	os_printf("doOpen");
+
+	char param[20];
+	int inputNum = 0;
+
+    if (getValue(param, conn->url,'/',2))
+    {
+    	inputNum = atoi(param);
+    }
+
+	 //Set GPIO to HIGH
+	gpio_output_set(portsBits[inputNum], 0, portsBits[inputNum], 0);
+	portsVal[inputNum] = 1;
+
+	os_timer_disarm(&open_timer);
+    os_timer_setfn(&open_timer, (os_timer_func_t *)setPortToLow, (void*)inputNum);
+    os_timer_arm(&open_timer, 3000, 0);
+
 }
+
+void ICACHE_FLASH_ATTR doWifiport(ServerConnData* conn)
+{
+	os_printf("doWifiport");
+	// port/id/name
+	char buff[10];
+
+	char tmp[10];
+	int idx;
+	int i=2;
+
+    if (getValue(tmp, conn->url,'/',i))
+    {
+		os_printf("wifi port = %s", tmp);
+		idx = atoi(tmp);
+
+    	flashData->ServerPort = idx;
+        flash_write();
+    }
+
+
+	StartResponseJson(conn);
+
+	httpdSend(conn,"{\"ServerPort\":", -1);
+
+	os_sprintf(buff,"\"%d\"", flashData->ServerPort, -1);
+	httpdSend(conn,buff, -1);
+	httpdSend(conn,"}", -1);
+
+	xmitSendBuff(conn);
+
+
+
+}
+
 void ICACHE_FLASH_ATTR doStatus(ServerConnData* conn)
 {
 	os_printf("doStatus");
