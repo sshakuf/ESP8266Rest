@@ -1,5 +1,5 @@
 #include "thingspeak.h"
-#include "restapi.h"
+#include "RestAPI.h"
 
 #include "espmissingincludes.h"
 #include "c_types.h"

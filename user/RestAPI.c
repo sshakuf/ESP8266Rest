@@ -32,6 +32,7 @@ PortInfo* ports;
 //ip/initialize     - intialize to default
 //ip/sntp           - show the sntp hours from GMT
 //ip/sntp/hoursfromGMT    set hours from GMT  ( for israel should be 3)
+//ip/getwifi/
 
 RestPtrs _RestPtrsTable[] = { 
   {"flipinput",&doFlipinput},		// ip/flipinput/portnum
@@ -47,6 +48,7 @@ RestPtrs _RestPtrsTable[] = {
   {"initialize", &doInitialize},	// ip/initialize
   {"sntp", &doSNTP},				// ip/sntp       or ip/sntp/hoursfromGMT
   {"wifiport", &doWifiport},
+  {"scan", &doScanWifi},
   {"END", &doStatus} // end of commands
 
 };
@@ -303,7 +305,7 @@ void ICACHE_FLASH_ATTR doSNTP(ServerConnData* conn)
 void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 {
 
-	char buff[50];
+	char buff[200];
 	char *p;
 	int i=0;
 
@@ -323,7 +325,6 @@ void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 	httpdSend(conn,"}}", -1);
 
 	xmitSendBuff(conn);
-
 }
 
 void ICACHE_FLASH_ATTR doGetEvents(ServerConnData* conn)
@@ -550,5 +551,64 @@ void ICACHE_FLASH_ATTR doStatus(ServerConnData* conn)
 {
 	os_printf("doStatus");
     SendPortStatus(conn);
+	os_printf("doStatus Done!");
 }
+
+
+void ICACHE_FLASH_ATTR wifiscan_done_callback(void *arg, STATUS status)
+{
+
+  if (status == OK)
+  {
+    struct bss_info *bss = (struct bss_info*)arg;
+    bss = STAILQ_NEXT(bss, next);
+
+    while(bss)
+    {
+      os_printf("%s %d %d %d\n", bss->ssid, bss->channel, bss->rssi, bss->authmode);
+      bss = STAILQ_NEXT(bss, next);
+    }
+  }
+}
+
+void ICACHE_FLASH_ATTR StartScanWifi()
+{
+    os_printf("Starting scanning...");
+    if (wifi_station_scan(NULL, wifiscan_done_callback))
+    {
+        os_printf("OK!");
+
+    }
+    else
+    {
+        os_printf("Error...");
+    }
+}
+
+void ICACHE_FLASH_ATTR doScanWifi(ServerConnData* conn)
+{
+	char buff[50];
+	char *p;
+	int i=0;
+
+	StartResponseJson(conn);
+
+	httpdSend(conn,"{\"ports\":{", -1);
+
+	for (i=0; i<NUM_OF_PORTS; i++)
+	{
+		os_sprintf(buff,"\"%s\":\"%d\"", &flashData->Ports[i].PortName[0], portsVal[i], -1);
+		httpdSend(conn,buff, -1);
+		if (i < NUM_OF_PORTS-1)
+	   	{
+			httpdSend(conn,",", -1);
+	   	}
+	}
+	httpdSend(conn,"}}", -1);
+
+	xmitSendBuff(conn);
+
+}
+
+
 

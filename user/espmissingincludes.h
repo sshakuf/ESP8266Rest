@@ -1,8 +1,10 @@
 #ifndef ESPMISSINGINCLUDES_H
 #define ESPMISSINGINCLUDES_H
 
+
+#include <c_types.h>
 #include <ets_sys.h>
-#include <stdint.h>
+//#include <stdint.h>
 
 //Missing function prototypes in include folders. Gcc will warn on these if we don't define 'em anywhere.
 //MOST OF THESE ARE GUESSED! but they seem to swork and shut up the compiler.
@@ -32,14 +34,14 @@ int os_printf(const char *format, ...)  __attribute__ ((format (printf, 1, 2)));
 int os_snprintf(char *str, size_t size, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
 int os_printf_plus(const char *format, ...)  __attribute__ ((format (printf, 1, 2)));
 void pvPortFree(void *ptr);
-void *pvPortMalloc(size_t xWantedSize);
+//void *pvPortMalloc(size_t xWantedSize);
 void *pvPortZalloc(size_t);
 void uart_div_modify(int no, unsigned int freq);
-void vPortFree(void *ptr);
+//void vPortFree(void *ptr);
 void *vPortMalloc(size_t xWantedSize);
 uint8 wifi_get_opmode(void);
 uint32 system_get_time();
-int os_random();
+//int os_random();
 int rand(void);
 void ets_bzero(void *s, size_t n);
 void ets_delay_us(int ms);

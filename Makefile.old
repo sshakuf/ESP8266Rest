@@ -18,12 +18,9 @@ XTENSA_TOOLS_ROOT ?= /Volumes/ESP_DEVELOP/esp-open-sdk/xtensa-lx106-elf/bin
 SDK_BASE	?= /opt/Espressif/ESP8266_SDK
 
 #Esptool.py path and port
-#ESPTOOL		?= python /usr/bin/esptool.py
-ESPTOOL		?= python $(XTENSA_TOOLS_ROOT)/esptool.py
+ESPTOOL		?= python /usr/bin/esptool.py
 
 ESPPORT		?= /dev/tty.usbserial-A50285BI
-#ESPPORT		?= /dev/tty.SLAB_USBtoUART
-
 #GIL#ESPPORT		?= /dev/tty.usbserial-A50285BI
 #ESPPORT		?= /dev/tty.usbserial-A9ITT3JN
 
@@ -31,9 +28,8 @@ ESPPORT		?= /dev/tty.usbserial-A50285BI
 TARGET		= app
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES		=  user
-EXTRA_INCDIR    = include 
-#/opt/Espressif/include
+MODULES		= driver user
+EXTRA_INCDIR    = include /opt/Espressif/include
 
 # libraries used in this project, mainly provided by the SDK
 LIBS		= c gcc hal pp phy net80211 lwip wpa main
@@ -69,8 +65,7 @@ LD		:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 ####
 #### no user configurable options below here
 ####
-#FW_TOOL		?= /usr/bin/esptool
-FW_TOOL		?= /Volumes/ESP_DEVELOP/esp-open-sdk/esptool_
+FW_TOOL		?= /usr/bin/esptool
 SRC_DIR		:= $(MODULES)
 BUILD_DIR	:= $(addprefix $(BUILD_BASE)/,$(MODULES))
 
@@ -139,12 +134,6 @@ firmware:
 
 flash: firmware/0x00000.bin firmware/0x40000.bin
 	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 firmware/0x00000.bin 0x40000 firmware/0x40000.bin
-
-flash1: firmware/0x00000.bin firmware/0x40000.bin
-	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 firmware/0x00000.bin 
-
-flash2: firmware/0x00000.bin firmware/0x40000.bin
-	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x40000 firmware/0x40000.bin
 
 clean:
 	$(Q) rm -f $(APP_AR)

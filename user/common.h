@@ -5,13 +5,15 @@
 
 #define SSID "STRS"
 #define SSID_PASSWORD "1011040311037"
-//#define SSID "CheggBackupHot"
+//#define SSID "NewBackupChegg"
 //#define SSID_PASSWORD "Ch399!M3"
 //#define SSID "klar_wifi"
 //#define SSID_PASSWORD "idonoa2013"
 
-#define AP_SSID "ESP"
+#define AP_SSID "ESP_door"
 #define AP_PASSWORD "12341234"
+
+#define HOSTNAME "Door"
 
 // void dbgprint1(char* inBuff);
 // void dbgprint(const char* format, ... );

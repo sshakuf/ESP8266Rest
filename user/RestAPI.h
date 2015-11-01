@@ -35,6 +35,7 @@ void ICACHE_FLASH_ATTR doSetPorts(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doInitialize(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doSNTP(ServerConnData* conn);
 void ICACHE_FLASH_ATTR doWifiport(ServerConnData* conn);
+void ICACHE_FLASH_ATTR doScanWifi(ServerConnData* conn);
 
 
 RestPtrs* RestPtrsTable;

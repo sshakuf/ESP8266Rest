@@ -28,6 +28,9 @@ static void loop(os_event_t *events);
 
 static volatile os_timer_t some_timer;
 
+// scan fow wifi networkd 
+// #define SCANNER 
+
 // void dbgprint1(char* inBuff)
 // {
 //     uart0_tx_buffer(inBuff,strlen(inBuff));
@@ -104,92 +107,10 @@ bool ICACHE_FLASH_ATTR IsStationConnected()
 	  return false;
 }
 
-static void ICACHE_FLASH_ATTR networkConnectedCb(void *arg);
-static void ICACHE_FLASH_ATTR networkDisconCb(void *arg);
-static void ICACHE_FLASH_ATTR networkReconCb(void *arg, sint8 err);
-static void ICACHE_FLASH_ATTR networkRecvCb(void *arg, char *data, unsigned short len);
-static void ICACHE_FLASH_ATTR networkSentCb(void *arg);
 void ICACHE_FLASH_ATTR network_init();
 
 LOCAL os_timer_t network_timer;
 
-static void ICACHE_FLASH_ATTR networkTimeFoundCb(const char *name, ip_addr_t *ip, void *arg) {
-  static esp_tcp tcp;
-  struct espconn *conn=(struct espconn *)arg;
-  if (ip==NULL) {
-    os_printf("Nslookup failed :/ Trying again...\n");
-    os_printf("lfai");
-    network_init();
-  }
-
-  // os_printf("lokk"); 
-  char page_buffer[20];
-  os_sprintf(page_buffer,"DST: %d.%d.%d.%d",
-  *((uint8 *)&ip->addr), *((uint8 *)&ip->addr + 1),
-  *((uint8 *)&ip->addr + 2), *((uint8 *)&ip->addr + 3));
-  os_printf(page_buffer);  
-
-  // conn->type=ESPCONN_TCP;
-  // conn->state=ESPCONN_NONE;
-  // conn->proto.tcp=&tcp;
-  // conn->proto.tcp->local_port=espconn_port();
-  // conn->proto.tcp->remote_port=80;
-  // os_memcpy(conn->proto.tcp->remote_ip, &ip->addr, 4);
-  // espconn_regist_connectcb(conn, networkConnectedCb);
-  // espconn_regist_disconcb(conn, networkDisconCb);
-  // espconn_regist_reconcb(conn, networkReconCb);
-  // espconn_regist_recvcb(conn, networkRecvCb);
-  // espconn_regist_sentcb(conn, networkSentCb);
-  // espconn_connect(conn);
-
-}
-
-static void ICACHE_FLASH_ATTR networkSentCb(void *arg) {
-  uart0_tx_buffer("sent",4);
-}
-
-static void ICACHE_FLASH_ATTR networkRecvCb(void *arg, char *data, unsigned short len) {
-
-  uart0_tx_buffer("recv",4);
-  
-  struct espconn *conn=(struct espconn *)arg;
-  int x;
-  uart0_tx_buffer(data,len);
-  //for (x=0; x<len; x++) networkParseChar(conn, data[x]);
-}
-
-static void ICACHE_FLASH_ATTR networkConnectedCb(void *arg) {
-
-  uart0_tx_buffer("conn",4);
-  struct espconn *conn=(struct espconn *)arg;
-
-  // char *data = "GET / HTTP/1.0\r\n\r\n\r\n";
-  // sint8 d = espconn_sent(conn,data,strlen(data));
-
-  // espconn_regist_recvcb(conn, networkRecvCb);
-  // uart0_tx_buffer("cend",4);
-}
-
-static void ICACHE_FLASH_ATTR networkReconCb(void *arg, sint8 err) {
-  uart0_tx_buffer("rcon",4);
-//  os_printf("Reconnect\n\r");
-//  network_init();
-}
-
-static void ICACHE_FLASH_ATTR networkDisconCb(void *arg) {
-  uart0_tx_buffer("dcon",4);
-//  os_printf("Disconnect\n\r");
-//  network_init();
-}
-
-
-void ICACHE_FLASH_ATTR GetNetworkTime() {
-  static struct espconn conn;
-  static ip_addr_t ip;
-  os_printf("Looking up server...\n");
-    os_printf("look");
-  espconn_gethostbyname(&conn, "www.google.com", &ip, networkTimeFoundCb);
-}
 
 void ICACHE_FLASH_ATTR SetSetverMode()
 {
@@ -205,13 +126,35 @@ void ICACHE_FLASH_ATTR SetSetverMode()
 
 }
 
+void ICACHE_FLASH_ATTR initmDNS(struct ip_info ipconfig) {
+
+  struct mdns_info *info = (struct mdns_info *)os_zalloc(sizeof(struct mdns_info));
+  info->host_name = "espressif";
+  info->ipAddr = ipconfig.ip.addr; //ESP8266 station IP
+  info->server_name = "iot";
+  info->server_port = 80;
+  info->txt_data[0] = "version = now";
+  // info->txt_data[1] = "user1 = data1";
+  // info->txt_data[2] = "user2 = data2";
+  espconn_mdns_init(info);
+  // espconn_mdns_server_register(); 
+
+}
+
 int counter = 0;
 char ipstation[20];
+    struct station_config stationConf;
 
 void ICACHE_FLASH_ATTR network_check_ip(void) {
   struct ip_info ipconfig;
   os_timer_disarm(&network_timer);
   wifi_get_ip_info(STATION_IF, &ipconfig);
+  char buffer[20];
+  
+  os_printf("\nConnecting to %s... ", stationConf.ssid);
+  os_sprintf(buffer,"State: %d - ",wifi_station_get_connect_status());
+  os_printf(buffer);
+
   if (wifi_station_get_connect_status() == STATION_GOT_IP && ipconfig.ip.addr != 0) {
     char page_buffer[20];
     os_sprintf(page_buffer,"IP: %d.%d.%d.%d",IP2STR(&ipconfig.ip));
@@ -221,14 +164,21 @@ void ICACHE_FLASH_ATTR network_check_ip(void) {
     ServerInit(flashData->ServerPort);
 
 
+    os_printf("mDNS init");
+    initmDNS(ipconfig);
+    os_printf("mDNS end");
+
     //GetNetworkTime();
     os_printf("SNTP-----%d", flashData->SNTP);
     sntp_init(flashData->SNTP);
 
+    // check network status in 10 min
+    os_timer_arm(&network_timer, 10*60*1000, 0);// 10 min
+
   } else {
     counter++;
     os_printf("No ip found\n\r");
-    if (counter < 12)
+    if (counter < 30)
     {
         os_timer_setfn(&network_timer, (os_timer_func_t *)network_check_ip, NULL);
         os_printf("try %d\n", counter);
@@ -236,10 +186,14 @@ void ICACHE_FLASH_ATTR network_check_ip(void) {
     }
     else
     {
-        os_printf("could not connect to server\n", counter);
+        os_printf("could not connect to server...\n", counter);
         wifi_station_disconnect();
         ServerInit(flashData->ServerPort);
 
+
+        // doing reconnect
+        os_timer_arm(&network_timer, 2*60*1000, 0);// 2 min
+        wifi_station_connect();
         counter = 0;
     }
   }
@@ -314,8 +268,8 @@ void ICACHE_FLASH_ATTR flash_write() {
   // spi_flash_write(0x3C000,(uint32 *)settings,1024);
  
 }
- 
-void ICACHE_FLASH_ATTR flash_read() {
+  
+void ICACHE_FLASH_ATTR ReadFromFlash() {
     os_printf("flashRead() size-%d\n", sizeof(FlashData));
 
     flashData->magic =0;
@@ -328,7 +282,42 @@ void ICACHE_FLASH_ATTR flash_read() {
     	os_printf("ReadFlash ERROR!\n");
     	initFlash();
     }
+    if (flashData->ServerPort == 0)
+      {flashData->ServerPort=80;}
 }
+
+
+void ICACHE_FLASH_ATTR scan_done_callback(void *arg, STATUS status)
+{
+
+  if (status == OK)
+  {
+    struct bss_info *bss = (struct bss_info*)arg;
+    bss = STAILQ_NEXT(bss, next);
+
+    while(bss)
+    {
+      os_printf("%s %d %d %d\n", bss->ssid, bss->channel, bss->rssi, bss->authmode);
+      bss = STAILQ_NEXT(bss, next);
+    }
+  }
+}
+
+void ICACHE_FLASH_ATTR init_done()
+{
+    os_printf("Starting scanning...");
+    if (wifi_station_scan(NULL, scan_done_callback))
+    {
+        os_printf("OK!");
+
+    }
+    else
+    {
+        os_printf("Error..."); 
+    }
+}
+
+
 
 //Init function 
 void ICACHE_FLASH_ATTR user_init() {
@@ -340,7 +329,7 @@ void ICACHE_FLASH_ATTR user_init() {
     stdoutInit();
     char ssid[32] = SSID;
     char password[64] = SSID_PASSWORD;
-    struct station_config stationConf;
+    //struct station_config stationConf;
 
 
     os_printf("\ninit\n");
@@ -352,34 +341,47 @@ void ICACHE_FLASH_ATTR user_init() {
     wifi_set_opmode(STATIONAP_MODE);
 
     initFlash();
-    flash_read();
+    ReadFromFlash();
 
-    //if (flashData->magic != MAGIC_NUM)
+    //if (flashData->magic != MAGIC_NUM) 
     {
     //Set ap settings
-        os_memcpy(&stationConf.ssid, ssid, 32);
-        os_memcpy(&stationConf.password, password, 64);
+    	stationConf.bssid_set = 0;
+        os_memcpy(&stationConf.ssid, ssid, strlen(ssid));
+        os_memcpy(&stationConf.password, password, strlen(password));
+        if (flashData->ServerPort < 0)
+        {
+        	flashData->ServerPort = 80;
+        }
     }
-//    else
+//    else 
 //    {
 //        os_memcpy(&stationConf.ssid, flashData->ssid, 32);
 //        os_memcpy(&stationConf.password, flashData->password, 64);
 //
 //    }
+    wifi_station_set_hostname(HOSTNAME);
     wifi_station_set_config(&stationConf);
     os_printf("\nConnecting to %s, %s\n", stationConf.ssid, stationConf.password);
 
-    SetSetverMode();
 
+#ifdef SCANNER
+    wifi_station_set_auto_connect(FALSE);
+    system_init_done_cb(init_done);
+#else
 
-    //Start os task
-    system_os_task(loop, user_procTaskPrio,user_procTaskQueue, user_procTaskQueueLen);
+   wifi_station_set_auto_connect(TRUE);
 
-    system_os_post(user_procTaskPrio, 0, 0 );
+   SetSetverMode();
 
-    os_printf("\nInitializing Network\n");
-    network_init(); 
+   //Start os task
+   system_os_task(loop, user_procTaskPrio,user_procTaskQueue, user_procTaskQueueLen);
 
+   system_os_post(user_procTaskPrio, 0, 0 );
+
+   os_printf("\nInitializing Network\n");
+   network_init();
+#endif
 
 }
 
