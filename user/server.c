@@ -74,9 +74,12 @@ int ICACHE_FLASH_ATTR getValue(char* retParam, const char* data, char separator,
   retParam[size] = '\0';
   os_printf("\nget %d param (0=%d,1=%d): [%s]\n", index, strIndex[0], strIndex[1], retParam);
 
-  if (found < index)
+  found--;
+
+  if (found < index || size == 0)
    {
- 	  return -1;
+   		retParam[0]= '\0';
+ 	 	return -1;
    }
 
    return size;

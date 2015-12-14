@@ -1,5 +1,5 @@
-//RestAPI.c
-#include "common.h"
+ //RestAPI.c
+#include "common.h" 
 #include "RestAPI.h"
 // #include "server.h"
 #include "thingspeak.h"
@@ -14,6 +14,8 @@
 #include "time_utils.h"
 
 #include <string.h>
+
+#include <gpio.h>
 
 bool portsVal[NUM_OF_PORTS];
 
@@ -33,6 +35,7 @@ PortInfo* ports;
 //ip/sntp           - show the sntp hours from GMT
 //ip/sntp/hoursfromGMT    set hours from GMT  ( for israel should be 3)
 //ip/getwifi/
+// ip/scan
 
 RestPtrs _RestPtrsTable[] = { 
   {"flipinput",&doFlipinput},		// ip/flipinput/portnum
@@ -49,6 +52,7 @@ RestPtrs _RestPtrsTable[] = {
   {"sntp", &doSNTP},				// ip/sntp       or ip/sntp/hoursfromGMT
   {"wifiport", &doWifiport},
   {"scan", &doScanWifi},
+  {"setpin", &doSetPin},			// ip/pin/value    (0,1)
   {"END", &doStatus} // end of commands
 
 };
@@ -60,6 +64,15 @@ void ICACHE_FLASH_ATTR InitializeRest()
 	PowerEvents =  &flashData->_PowerEvents[0];
 	ports = &flashData->Ports[0];
 
+
+
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13);
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14);
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
+	gpio16_output_conf();
+	// PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPI16_U, FUNC_GPI16);
+
 	// todo: loadevents from EEPROM
 }
 
@@ -67,8 +80,8 @@ void ICACHE_FLASH_ATTR InitializeRest()
 uint32 portsBits[NUM_OF_PORTS] = {BIT2};
 int PortPinNumber[NUM_OF_PORTS] = {2};
 #else
-uint32 portsBits[NUM_OF_PORTS] = {BIT0,BIT1,BIT2,BIT3,BIT4,BIT5,BIT6,BIT7};
-int PortPinNumber[NUM_OF_PORTS] = {0,1,2,3,4,5,6,7};
+uint32 portsBits[NUM_OF_PORTS] = {BIT0,BIT1,BIT12,BIT13,BIT14,BIT15,BIT16,BIT7};
+int PortPinNumber[NUM_OF_PORTS] = {0,1,12,13,14,15,16,7};
 #endif
 
 
@@ -150,6 +163,7 @@ void ICACHE_FLASH_ATTR OneSecLoop()
 				// output pin on
 				//Set GPIO2 to HIGH
 				gpio_output_set(portsBits[i], 0, portsBits[i], 0);
+				//GPIO_OUTPUT_SET
 				portsVal[i] = 1;
 				ThingSpeak();
 			}
@@ -158,6 +172,7 @@ void ICACHE_FLASH_ATTR OneSecLoop()
 				// output pin off
 				//Set GPIO2 to LOW
 				gpio_output_set(0, portsBits[i], portsBits[i], 0);
+				//GPIO_OUTPUT_SET
 				portsVal[i] = 0;
 				ThingSpeak();
 			}
@@ -279,7 +294,7 @@ void ICACHE_FLASH_ATTR doSNTP(ServerConnData* conn)
 	int idx;
 	int i=2;
 
-    if (getValue(tmp, conn->url,'/',i))
+    if (getValue(tmp, conn->url,'/',i)!= -1)
     {
 		os_printf("SNTP = %s", tmp);
 		idx = atoi(tmp);
@@ -305,7 +320,7 @@ void ICACHE_FLASH_ATTR doSNTP(ServerConnData* conn)
 void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn)
 {
 
-	char buff[200];
+	char buff[200]; 
 	char *p;
 	int i=0;
 
@@ -453,6 +468,55 @@ void ICACHE_FLASH_ATTR doGetWifi(ServerConnData* conn)
     SendHTTPResponse(conn, buff);
 
 }
+
+void PortPinSet(int inputNum, bool inValue)
+{
+
+	if (PortPinNumber[inputNum] == 16)
+	{
+		gpio16_output_set(inValue);
+	}
+	else
+	{
+
+	    if (!inValue)
+	    {
+	        //Set GPIO to LOW
+			os_printf("Pin %d = 0\r\n", inputNum);
+		    gpio_output_set(0, portsBits[inputNum], portsBits[inputNum], 0);
+	        portsVal[inputNum] = 0;
+	        // GPIO_OUTPUT_SET(inputNum,0);
+	    }
+	    else
+	    {
+	        //Set GPIO to HIGH
+			os_printf("Pin %d = 1\r\n", inputNum);
+	        gpio_output_set(portsBits[inputNum], 0, portsBits[inputNum], 0);
+	        portsVal[inputNum] = 1;
+	        // GPIO_OUTPUT_SET(inputNum, 1);
+	    }
+	}
+
+}
+
+
+void ICACHE_FLASH_ATTR doSetPin(ServerConnData* conn)
+{
+	os_printf("doSetPin\r\n");
+
+	char param[10];
+	char param2[10];
+    getValue(param, conn->url,'/',2);
+    getValue(param2, conn->url,'/',3);
+	int inputNum = atoi(param);
+	int inputVal = atoi(param2);
+
+	PortPinSet(inputNum, inputVal);
+	
+    SendPortStatus(conn);
+
+}
+
 void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
 {
 	os_printf("doFlipinput\r\n");
@@ -466,15 +530,11 @@ void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
 
     if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & portsBits[inputNum])
     {
-        //Set GPIO2 to LOW
-        gpio_output_set(0, portsBits[inputNum], portsBits[inputNum], 0);
-        portsVal[inputNum] = 0;
+        PortPinSet(inputNum, 0);
     }
     else
     {
-        //Set GPIO2 to HIGH
-        gpio_output_set(portsBits[inputNum], 0, portsBits[inputNum], 0);
-        portsVal[inputNum] = 1;
+        PortPinSet(inputNum, 1);
     }
     SendPortStatus(conn);
 }
@@ -485,9 +545,8 @@ LOCAL os_timer_t open_timer;
 void ICACHE_FLASH_ATTR setPortToLow(void* inputNum)
 {
 
+	PortPinSet((int)inputNum, 0);
 	//Set GPIO to LOW
-	gpio_output_set(0, portsBits[(int)inputNum], portsBits[(int)inputNum], 0);
-	portsVal[(int)inputNum] = 0;
 	os_printf("setPortToLow %d", (int)inputNum);
 }
 
@@ -495,21 +554,36 @@ void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn)
 {
 	os_printf("doOpen");
 
-	char param[20];
-	int inputNum = 0;
+	char param[50];
+	int inputNum = 6;
 
-    if (getValue(param, conn->url,'/',2))
+	int test = getValue(param, conn->url,'/',2);
+	os_printf("url - %s       getValue = %d\r\n", conn->url, test);
+
+    if (getValue(param, conn->url,'/',2) != -1)
     {
+
     	inputNum = atoi(param);
     }
 
 	 //Set GPIO to HIGH
-	gpio_output_set(portsBits[inputNum], 0, portsBits[inputNum], 0);
-	portsVal[inputNum] = 1;
+	PortPinSet(inputNum, 1);
 
 	os_timer_disarm(&open_timer);
     os_timer_setfn(&open_timer, (os_timer_func_t *)setPortToLow, (void*)inputNum);
     os_timer_arm(&open_timer, 3000, 0);
+
+
+
+	char buff[50]; 
+
+	StartResponseJson(conn);
+
+	os_sprintf(buff,"{\"Open\": %d }", inputNum);
+	httpdSend(conn,buff, -1);
+
+	xmitSendBuff(conn);
+
 
 }
 
@@ -523,7 +597,7 @@ void ICACHE_FLASH_ATTR doWifiport(ServerConnData* conn)
 	int idx;
 	int i=2;
 
-    if (getValue(tmp, conn->url,'/',i))
+    if (getValue(tmp, conn->url,'/',i)!= -1)
     {
 		os_printf("wifi port = %s", tmp);
 		idx = atoi(tmp);
@@ -587,7 +661,7 @@ void ICACHE_FLASH_ATTR StartScanWifi()
 
 void ICACHE_FLASH_ATTR doScanWifi(ServerConnData* conn)
 {
-	char buff[50];
+ 	char buff[50];
 	char *p;
 	int i=0;
 

@@ -21,7 +21,10 @@ SDK_BASE	?= /opt/Espressif/ESP8266_SDK
 #ESPTOOL		?= python /usr/bin/esptool.py
 ESPTOOL		?= python $(XTENSA_TOOLS_ROOT)/esptool.py
 
-ESPPORT		?= /dev/tty.usbserial-A50285BI
+#ESPPORT		?= /dev/tty.usbserial-A50285BI
+#ESPPORT		?= /dev/tty.SLAB_USBtoUART
+ESPPORT		?=/dev/tty.wchusbserial1410
+
 #ESPPORT		?= /dev/tty.SLAB_USBtoUART
 
 #GIL#ESPPORT		?= /dev/tty.usbserial-A50285BI

@@ -3,12 +3,14 @@
 
 #include "c_types.h"
 
-#define SSID "STRS"
+#define SSID "STRS1"
 #define SSID_PASSWORD "1011040311037"
 //#define SSID "NewBackupChegg"
 //#define SSID_PASSWORD "Ch399!M3"
 //#define SSID "klar_wifi"
 //#define SSID_PASSWORD "idonoa2013"
+// #define SSID "Backup"
+// #define SSID_PASSWORD "!Ch399!M3"
 
 #define AP_SSID "ESP_door"
 #define AP_PASSWORD "12341234"

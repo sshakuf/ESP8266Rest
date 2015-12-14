@@ -21,7 +21,8 @@
 
 #include "sntp.h"   
 
-#define user_procTaskPrio        0
+
+#define user_procTaskPrio        0 
 #define user_procTaskQueueLen    1
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
 static void loop(os_event_t *events);
@@ -281,6 +282,9 @@ void ICACHE_FLASH_ATTR ReadFromFlash() {
     {
     	os_printf("ReadFlash ERROR!\n");
     	initFlash();
+      os_printf("Flash Initialized!\n");
+      flash_write();
+      os_printf("Flash Write finished.!\n");
     }
     if (flashData->ServerPort == 0)
       {flashData->ServerPort=80;}
@@ -336,7 +340,8 @@ void ICACHE_FLASH_ATTR user_init() {
 
 
     user_init_gpio();
-    //Set station mode & AP mode
+
+     //Set station mode & AP mode
     // wifi_set_opmode(STATION_MODE);
     wifi_set_opmode(STATIONAP_MODE);
 
