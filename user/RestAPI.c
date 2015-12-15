@@ -575,7 +575,7 @@ void ICACHE_FLASH_ATTR doOpen(ServerConnData* conn)
 
 
 
-	char buff[50]; 
+	char buff[50];  
 
 	StartResponseJson(conn);
 
