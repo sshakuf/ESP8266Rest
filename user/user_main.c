@@ -270,6 +270,16 @@ void ICACHE_FLASH_ATTR flash_write() {
  
 }
   
+void ICACHE_FLASH_ATTR printFlash()
+{
+        os_printf("magic: %d, ", flashData->magic);
+        os_printf("ssid: %s, ", flashData->ssid);
+        os_printf("pass: %s, ", flashData->password);
+        os_printf("SNTP: %d, ", flashData->SNTP);
+        os_printf("ServerPort: %d, ", flashData->ServerPort);
+}
+
+
 void ICACHE_FLASH_ATTR ReadFromFlash() {
     os_printf("flashRead() size-%d\n", sizeof(FlashData));
 
@@ -286,9 +296,13 @@ void ICACHE_FLASH_ATTR ReadFromFlash() {
       flash_write();
       os_printf("Flash Write finished.!\n");
     }
+
     if (flashData->ServerPort == 0)
       {flashData->ServerPort=80;}
+
+    printFlash();
 }
+
 
 
 void ICACHE_FLASH_ATTR scan_done_callback(void *arg, STATUS status)
@@ -348,7 +362,7 @@ void ICACHE_FLASH_ATTR user_init() {
     initFlash();
     ReadFromFlash();
 
-    //if (flashData->magic != MAGIC_NUM) 
+    if (flashData->magic != MAGIC_NUM) 
     {
     //Set ap settings
     	stationConf.bssid_set = 0;
@@ -359,12 +373,12 @@ void ICACHE_FLASH_ATTR user_init() {
         	flashData->ServerPort = 80;
         }
     }
-//    else 
-//    {
-//        os_memcpy(&stationConf.ssid, flashData->ssid, 32);
-//        os_memcpy(&stationConf.password, flashData->password, 64);
-//
-//    }
+   else 
+   {
+       os_memcpy(&stationConf.ssid, flashData->ssid, 32);
+       os_memcpy(&stationConf.password, flashData->password, 64);
+
+   }
     wifi_station_set_hostname(HOSTNAME);
     wifi_station_set_config(&stationConf);
     os_printf("\nConnecting to %s, %s\n", stationConf.ssid, stationConf.password);

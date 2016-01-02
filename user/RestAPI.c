@@ -162,18 +162,20 @@ void ICACHE_FLASH_ATTR OneSecLoop()
 			{
 				// output pin on
 				//Set GPIO2 to HIGH
-				gpio_output_set(portsBits[i], 0, portsBits[i], 0);
+				//gpio_output_set(portsBits[i], 0, portsBits[i], 0);
 				//GPIO_OUTPUT_SET
 				portsVal[i] = 1;
+				PortPinSet(i,1);
 				ThingSpeak();
 			}
 			else
 			{
 				// output pin off
 				//Set GPIO2 to LOW
-				gpio_output_set(0, portsBits[i], portsBits[i], 0);
+				//gpio_output_set(0, portsBits[i], portsBits[i], 0);
 				//GPIO_OUTPUT_SET
 				portsVal[i] = 0;
+				PortPinSet(i,0);
 				ThingSpeak();
 			}
 		}
@@ -441,12 +443,13 @@ void ICACHE_FLASH_ATTR doSetWifi(ServerConnData* conn)
 
 	os_printf("paramSSID 2= %s\r\n", paramSSID);
 	os_printf("paramPASS 2= %s\r\n", paramPASS);
-	int passsize = strlen(paramPASS);
-	int x= passsize < 3 ? passsize/2 : 3;
-	paramPASS[x] = '\0';
 
     os_memcpy(flashData->ssid, paramSSID, 32);
     os_memcpy(flashData->password, paramPASS, 64);
+
+	int passsize = strlen(paramPASS);
+	int x= passsize > 3 ? passsize/2 : 3;
+	paramPASS[x] = '\0';
 	os_sprintf(buff,"{'ssid':'%s', 'pass':'%s...'}", flashData->ssid, paramPASS);
 
 	flashData->magic = MAGIC_NUM;
@@ -460,11 +463,12 @@ void ICACHE_FLASH_ATTR doGetWifi(ServerConnData* conn)
 	char buff[256];
 	os_printf("doGetWifi\r\n");
 
-	flash_read();
+	ReadFromFlash();
 	os_printf("SSID 2= %s\r\n", flashData->ssid);
 	//os_printf("PASS 2= %s\r\n", flashData->password);
 
-	os_sprintf(buff,"{'ssid':'%s', 'pass':'xxxx', 'IP':'%s'}", flashData->ssid, IPStation);
+	//os_sprintf(buff,"{'ssid':'%s', 'pass':'xxxx', 'IP':'%s'}", flashData->ssid, IPStation);
+	os_sprintf(buff,"{'ssid':'%s', 'pass':'%s', 'IP':'%s', Port:'%d'}", flashData->ssid, flashData->password, IPStation, flashData->ServerPort);
     SendHTTPResponse(conn, buff);
 
 }
@@ -475,6 +479,8 @@ void PortPinSet(int inputNum, bool inValue)
 	if (PortPinNumber[inputNum] == 16)
 	{
 		gpio16_output_set(inValue);
+		portsVal[inputNum] = inValue ? 1 : 0;
+		os_printf("Pin %d = %d \r\n", inputNum, portsVal[inputNum]);
 	}
 	else
 	{
@@ -528,14 +534,25 @@ void ICACHE_FLASH_ATTR doFlipinput(ServerConnData* conn)
 	os_printf("param 2= %d\r\n", inputNum);
 
 
-    if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & portsBits[inputNum])
-    {
-        PortPinSet(inputNum, 0);
-    }
-    else
-    {
-        PortPinSet(inputNum, 1);
-    }
+	os_printf("PortPinNumber[inputNum] = %d \r\n",PortPinNumber[inputNum]);
+	if (PortPinNumber[inputNum] == 16)
+	{
+		os_printf("portsVal[inputNum] = %d \r\n",portsVal[inputNum]);
+		portsVal[inputNum] = portsVal[inputNum] ? 0 : 1;
+		os_printf("portsVal[inputNum] = %d \r\n",portsVal[inputNum]);
+		PortPinSet(inputNum, portsVal[inputNum]);
+	}
+	else 
+	{
+	    if (GPIO_REG_READ(GPIO_OUT_ADDRESS) & portsBits[inputNum])
+	    {
+	        PortPinSet(inputNum, 0);
+	    }
+	    else
+	    {
+	        PortPinSet(inputNum, 1);
+	    }
+	}
     SendPortStatus(conn);
 }
 

@@ -19,6 +19,7 @@ typedef struct
 
 void ICACHE_FLASH_ATTR OneSecLoop();
 
+void PortPinSet(int inputNum, bool inValue);
 
 void ICACHE_FLASH_ATTR InitializeRest();
 void ICACHE_FLASH_ATTR SendPortStatus(ServerConnData* conn);

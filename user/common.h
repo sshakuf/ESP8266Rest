@@ -5,6 +5,9 @@
 
 #define SSID "STRS"
 #define SSID_PASSWORD "1011040311037"
+// #define SSID "ShakufNet"
+// #define SSID_PASSWORD "10111011"
+
 //#define SSID "NewBackupChegg"
 //#define SSID_PASSWORD "Ch399!M3"
 //#define SSID "klar_wifi"
