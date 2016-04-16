@@ -18,10 +18,10 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-
+ 
 #include "sntp.h"   
 
-
+ 
 #define user_procTaskPrio        0 
 #define user_procTaskQueueLen    1
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
@@ -46,7 +46,7 @@ static volatile os_timer_t some_timer;
 //     va_end( args );
 // }
  
-#include "thingspeak.h"
+#include "thingspeak.h"  
 
 
 
@@ -118,7 +118,7 @@ void ICACHE_FLASH_ATTR SetSetverMode()
     struct softap_config apConfig;
 
     os_memcpy(&apConfig.ssid, AP_SSID,32);
-    os_memcpy(&apConfig.password, AP_PASSWORD,32);
+    os_memcpy(&apConfig.password, AP_PASSWORD,64);
     apConfig.ssid_len = strlen(AP_SSID);
     apConfig.channel = 6;
     apConfig.authmode = AUTH_WPA_PSK;   

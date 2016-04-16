@@ -17,7 +17,7 @@
 // #define SSID "teridion"
 // #define SSID_PASSWORD "teridionisthebest"
 
-#define AP_SSID "ESP_door"
+#define AP_SSID     "ESP_door1"
 #define AP_PASSWORD "12341234"
 
 #define HOSTNAME "Door1"
